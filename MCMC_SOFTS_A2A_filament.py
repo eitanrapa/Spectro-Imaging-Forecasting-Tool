@@ -27,6 +27,28 @@ m = 9.109*10**(-31) # kg
 TCMB = 2.725 # K
 # canonical CMB
 
+#SOFTS function
+def sigB(band_details, Time):
+    # Use for apples to apples with OLIMPO photo
+    
+    BW_GHz = band_details['nu_meanGHz']*band_details['FBW']
+    
+    nu_min = (band_details['nu_meanGHz'] - 0.5*BW_GHz)*1E9 
+    nu_max = (band_details['nu_meanGHz'] + 0.5*BW_GHz)*1E9 
+    nu_res = band_details['nu_resGHz']*1E9
+    Npx = band_details['N_pixels']
+    
+    NEP_tot = (band_details['NEP_aWrtHz'])*1E-18
+    Nse = int(np.round(BW_GHz/band_details['nu_resGHz']))
+    nu_vec = np.linspace(nu_min, nu_max, Nse)
+    AOnu = (c/nu_vec)**2
+    
+    inefficiency = 0.019
+    delP = 2.0*NEP_tot/np.sqrt(Time*Npx)#*np.sqrt(2.0*nu_max/nu_res)
+    sigma_B = delP/(AOnu)/nu_res/inefficiency
+
+    return nu_vec, sigma_B
+
 #CMB Anisotropy function
 def dB(dt, frequency):
     temp = TCMB/(1+dt)
@@ -167,14 +189,21 @@ def log_probability(theta, anisotropies,freq, data, noise):
     return lp + log_likelihood(theta, anisotropies, freq, data, noise)            
 
 #Main MCMC code
-def mcmc(theta, anisotropies, rms_values, frequencies, long, lang, max_n, walkern, processors):
+def mcmc(theta, anisotropies, bands, Time, long, lang, max_n, walkern, processors):
     y, temperature, betac, amp_sides, b_sides = theta
     ksz_anis, tsz_anis, cmb_anis = anisotropies
     
-    nu_total_array = np.array(frequencies)*1e9
-    x = h_p*nu_total_array/(k_b*TCMB)
-    sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
-   
+    nu_total_array = np.empty(0)
+    total_sz_array = np.empty(0)
+    sigma_b_array = np.empty(0)
+    
+    #Create list of frequencies and NESB 
+    for bb in range(len(bands)):
+        b = bands[bb]
+        nu_vec_b, sigma_B_b = sigB(b, Time)
+        nu_total_array = np.concatenate((nu_total_array, nu_vec_b),axis=None)
+        sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b),axis=None)
+       
     #Get signals and foregrounds
     
     #Read SIDES fits file with emission lines

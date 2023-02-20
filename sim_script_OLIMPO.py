@@ -15,8 +15,8 @@ image_data = hdu[1].data
 #Specify parameter values
 
 #Galaxy cluster parameters
-y = 2e-6
-electron_temperature = 0.5 #KeV
+y = 6e-6
+electron_temperature = 5.0 #KeV
 tau = MCSZ.y_to_tau(y,electron_temperature)
 peculiar_vel = 0.000001 #km/s
 betac = peculiar_vel/(3e5)
@@ -30,8 +30,8 @@ b_sides = 1
 #rms_values = [0.36, 0.27, 0.70, 1.76] #uK^2 for 80 hour integration
 #rms_values = [0.18, 0.135, 0.35, 0.88] #uK^2 for 320 hour integration
 #rms_values = [0.36*np.sqrt(2), 0.27*np.sqrt(2), 0.70*np.sqrt(2), 1.76*np.sqrt(2)] #uK^2 for 40 hour integration
-rms_values = [0.72, 0.54, 1.40, 3.52] #uK^2 for 20 hour integration
-
+#rms_values = [0.72, 0.54, 1.40, 3.52] #uK^2 for 20 hour integration
+rms_values = [0.72*np.sqrt(2), 0.54*np.sqrt(2), 1.40*np.sqrt(2), 3.52*np.sqrt(2)] #uK^2 for 10 hour integration
 
 frequencies = [145,250,365,460]
 
@@ -85,7 +85,7 @@ for i in range(realizations):
     samples = np.append(samples,sampler.get_chain(discard=discard_n, flat=True, thin=thin_n),axis=0)
     
 #Write simulation output, change directory/name
-with open('/data/bolocam/bolocam/erapaport/mcmc_run_037', 'w') as f:
+with open('/data/bolocam/bolocam/erapaport/mcmc_run_040', 'w') as f:
     write = csv.writer(f)
     write.writerows(samples)
     

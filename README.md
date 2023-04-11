@@ -1,4 +1,4 @@
-# OLIMPO-forecasting
+# Bayesian Inference of Astrophysical imaging Spectrometers
 
 Requires SZpack for use
 

@@ -5,7 +5,7 @@ import pandas as pd
 import csv
 import sys, os
 #Installed SZpack directory
-sys.path.append("/home/bolocam/erapaport/Spectro-Imaging-Forecasting-Tool/codes/SZpack.v1.1.1/python")
+sys.path.append("/home/bolocam/erapaport/BIAS/codes/SZpack.v1.1.1/python")
 import SZpack as sz
 import emcee
 from astropy.io import fits
@@ -19,13 +19,9 @@ Cosmological terms from G. Sun
 c = 299792458.0                                         # Speed of light - [c] = m/s
 h_p = 6.626068e-34                                      # Planck's constant in SI units
 k_b = 1.38065e-23                                       # Boltzmann constant in SI units
-MJyperSrtoSI = 1E-20
-GHztoHz = 1E9
-h = 4.135*10**(-15) #in eV s
-k = 8.617*10**(-5) # eV/K
-m = 9.109*10**(-31) # kg
-TCMB = 2.725 # K
-# canonical CMB
+MJyperSrtoSI = 1e-20                                    # MegaJansky/Sr to SI units
+GHztoHz = 1e9                                           # Gigahertz to hertz
+TCMB = 2.725                                            # Canonical CMB in Kelvin
 
 #CMB Anisotropy function
 def dB(dt, frequency):
@@ -39,7 +35,7 @@ def szpack_signal(frequency, tau, temperature, betac):
     x_b = (h_p/(k_b * TCMB))*frequency
     original_x_b = (h_p/(k_b * TCMB))*frequency
     sz.compute_combo_means(x_b,tau,temperature,betac,0,0,0,0)
-    return x_b*13.33914078*(TCMB**3)*(original_x_b**3)*1e-20
+    return x_b*13.33914078*(TCMB**3)*(original_x_b**3)*MJyperSrtoSI
 
 #Classical tSZ analytical calculation
 def classical_tsz(y,frequency):
@@ -74,7 +70,7 @@ def model(theta, anisotropies, freq):
     df = pd.read_csv('/data/bolocam/bolocam/erapaport/sides.csv',header=None) 
     data = df.to_numpy()
     data = data.squeeze()
-    SIDES = data*1e-20
+    SIDES = data*MJyperSrtoSI
     
     #Modify template by amp_sides, b_sides 
     sides_template = amp_sides*interpolate(freq,SIDES,np.linspace(0,1500e9,751)*b_sides)
@@ -95,7 +91,7 @@ def model_indv(theta, anisotropies, freq):
     df = pd.read_csv('/data/bolocam/bolocam/erapaport/sides.csv',header=None) 
     data = df.to_numpy()
     data = data.squeeze()
-    SIDES = data*1e-20
+    SIDES = data*MJyperSrtoSI
     
     #Modify template by amp_sides, b_sides 
     sides_template = amp_sides*interpolate(freq,SIDES,np.linspace(0,1500e9,751)*b_sides)
@@ -122,7 +118,7 @@ def data_indv(theta, anisotropies, freq, long, lang):
     #Rebinning for 3 arcmin resolution
     for col in range(6):
         for row in range(6):
-            total_SIDES += image_data[:,long + row,lang + col]*1e-20
+            total_SIDES += image_data[:,long + row,lang + col]*MJyperSrtoSI
     total_SIDES = total_SIDES/36
     
     #Interpolate for specific frequencies
@@ -171,7 +167,7 @@ def mcmc(theta, anisotropies, rms_values, frequencies, long, lang, max_n, walker
     y, temperature, betac, amp_sides, b_sides = theta
     ksz_anis, tsz_anis, cmb_anis = anisotropies
     
-    nu_total_array = np.array(frequencies)*1e9
+    nu_total_array = np.array(frequencies)*GHztoHz
     x = h_p*nu_total_array/(k_b*TCMB)
     sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
    
@@ -185,7 +181,7 @@ def mcmc(theta, anisotropies, rms_values, frequencies, long, lang, max_n, walker
     #Rebinning for 3 arcmin resolution
     for col in range(6):
         for row in range(6):
-            total_SIDES += image_data[:,long + row,lang + col]*1e-20
+            total_SIDES += image_data[:,long + row,lang + col]*MJyperSrtoSI
     total_SIDES = total_SIDES/36
     
     #Interpolate for specific frequencies

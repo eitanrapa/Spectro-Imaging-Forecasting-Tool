@@ -1,7 +1,8 @@
 # Bayesian Inference of Astrophysical imaging Spectrometers
 
-Requires SZpack for use
+Tool for forecasting Spectrometric and Photometric devices in the study of Sunyaev-Zeldovich distortions.
+Includes CIB contamination with SIDES catalog, and CMB anisotropies as contaminants.
+Resolves for y-value, electron temperature, peculiar velocity, and profile of CIB. 
 
-To run a simulation, edit the settings in sim_script and then execute the python script. Make sure to look through entire code to comment/uncomment necessary requirements and modify values/outputs. 
-
-Also change directories in MCMC.py if necessary
+Requires SZpack for use.
+Also requires Pandas, AstroPy, NumPy, Matplotlib, Corner, Emcee, SciPy, multiprocessing.

@@ -13,7 +13,8 @@ from scipy.interpolate import interp1d
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import cm
-
+import corner
+import pygtc
 
 '''
 Cosmological terms from G. Sun
@@ -24,6 +25,7 @@ h_p = 6.626068e-34                                      # Planck's constant in S
 k_b = 1.38065e-23                                       # Boltzmann constant in SI units
 MJyperSrtoSI = 1e-20                                    # MegaJansky/Sr to SI units
 GHztoHz = 1e9                                           # Gigahertz to hertz
+HztoGHz = 1e-9                                          # Hertz to Gigahertz
 TCMB = 2.725                                            # Canonical CMB in Kelvin
 m = 9.109*10**(-31)                                     # Electron mass in kgs
 
@@ -178,20 +180,40 @@ class Spectral_Simulation_SOFTS:
             return -np.inf
         return lp + self.log_likelihood(theta, anisotropies, freq, data, noise)  
     
-    def mcmc(self, anisotropies, long, lang,  max_n, walkern, processors):
+    def mcmc(self, run_type, anisotropies, long, lang,  max_n, walkern, processors):
         ksz_anis, tsz_anis, cmb_anis = anisotropies
     
         nu_total_array = np.empty(0)
         total_sz_array = np.empty(0)
         sigma_b_array = np.empty(0)
     
-        #Create list of frequencies and NESB 
-        for bb in range(len(self.bands)):
-            b = self.bands[bb]
-            nu_vec_b, sigma_B_b = sigB(b, self.time)
-            nu_total_array = np.concatenate((nu_total_array, nu_vec_b),axis=None)
-            sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b),axis=None)
+        if (run_type == "SOFTS"):
+            #Create list of frequencies and NESB 
+            for bb in range(len(self.bands)):
+                b = self.bands[bb]
+                nu_vec_b, sigma_B_b = sigB(b, self.time)
+                nu_total_array = np.concatenate((nu_total_array, nu_vec_b),axis=None)
+                sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b),axis=None)
        
+        if (run_type == "OLIMPO"):
+                rms_values = np.asarray([0.36, 0.27, 0.70, 1.76])*(np.sqrt(80)/(np.sqrt(self.time/3600)))
+                frequencies = [145,250,365,460]
+                nu_total_array = np.array(frequencies)*GHztoHz
+                x = h_p*nu_total_array/(k_b*TCMB)
+                sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
+    
+        if (run_type == "HYBRID"):
+            rms_values = np.asarray([0.36, 0.27])*(np.sqrt(80)/(np.sqrt(self.time/3600)))
+            frequencies = [145,250]
+            nu_total_array = np.array(frequencies)*GHztoHz
+            x = h_p*nu_total_array/(k_b*TCMB)
+            sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
+            for bb in range(len(self.bands)-2):
+                b = self.bands[bb+2]
+                nu_vec_b, sigma_B_b = sigB(b, self.time)
+                nu_total_array = np.concatenate((nu_total_array, nu_vec_b),axis=None)
+                sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b),axis=None)
+                
         #Read FITS file
         fname = '/data/bolocam/bolocam/erapaport/continuum.fits'
         hdu = fits.open(fname)
@@ -227,7 +249,7 @@ class Spectral_Simulation_SOFTS:
         
         return sampler
     
-    def run_sim(self, run_number, chain_length = 10000, walkers = 100, realizations = 40, discard_n = 2000, thin_n = 100, processors_pool = 30):   
+    def run_sim(self, run_number, run_type, chain_length = 10000, walkers = 100, realizations = 40, discard_n = 2000, thin_n = 100, processors_pool = 30):   
         
         #Read saved parameters file
         df = pd.read_csv('/data/bolocam/bolocam/erapaport/mcmc_run009_parameters',header=None) 
@@ -242,17 +264,127 @@ class Spectral_Simulation_SOFTS:
             sides_lat = int(params[i,4])
             amp_ksz = params[i,6]
             amp_tsz= params[i,7]
-    
-        anisotropies = (amp_ksz, amp_tsz, amp_cmb)
-        sampler = self.mcmc(anisotropies, sides_long, sides_lat, chain_length, walkers, processors_pool)
-        samples = np.append(samples,sampler.get_chain(discard=discard_n, flat=True, thin=thin_n),axis=0)
-    
+            anisotropies = (amp_ksz, amp_tsz, amp_cmb)
+            sampler = self.mcmc(run_type, anisotropies, sides_long, sides_lat, chain_length, walkers, processors_pool)
+            samples = np.append(samples,sampler.get_chain(discard=discard_n, flat=True, thin=thin_n),axis=0)
+           
         #Write simulation output, change directory/name
         with open('/data/bolocam/bolocam/erapaport/mcmc_run_{}'.format(run_number), 'w') as f:
             write = csv.writer(f)
             write.writerows(samples)
     
-    def Differential_Intensity_Projection():
+    def Differential_Intensity_Projection(self, run_type, long, lat):
+        labels = ('tau','temperature','betac','amp_sides','b_sides')
+        freq = np.linspace(80e9,720e9,1000)
+        templates_complete = self.templates(freq, long, lat)
+  
+        plt.rc('xtick',labelsize=18)
+        plt.rc('ytick',labelsize=18)
+        plt.figure(figsize=(10,10))
+  
+        #Plot SZ components
+        plt.plot(freq*HztoGHz,abs(templates_complete[0]),'--k',label='Total SZ',linewidth=2)
+        plt.plot(freq*HztoGHz,abs(szpack_signal(freq,y_to_tau(self.y_value,self.electron_temperature),self.electron_temperature,1e-11) - classical_tsz(self.y_value,freq)),label='rSZ ' + str(self.electron_temperature) + ' keV')
+        
+        plt.plot(freq*HztoGHz,abs(classical_tsz(self.y_value,freq)),label='tSZ y=' + str(self.y_value))
+
+        #SIDES continuum model and emission line data
+        plt.plot(freq*HztoGHz,abs(templates_complete[1]),color='pink',label='SIDES continuum')
+        
+        if (run_type == "SOFTS"):
+            ncolor = len(self.bands)
+            color=iter(cm.gray_r(np.linspace(1,0.8,ncolor+1)))
+            for bb in range(ncolor):
+                b1 = self.bands[bb]
+                nu_vec_b1, sigma_B_b1 = sigB(b1, self.time)
+
+                colr=next(color)
+                plt.plot(nu_vec_b1*HztoGHz, sigma_B_b1,'o', lw=7, alpha=1, color='maroon')
+            
+        if (run_type == "OLIMPO"):
+            rms_values = np.asarray([0.36, 0.27, 0.70, 1.76])*(np.sqrt(80)/(np.sqrt(self.time/3600)))
+            frequencies = [145,250,365,460]
+            nu_total_array = np.array(frequencies)*GHztoHz
+            x = h_p*nu_total_array/(k_b*TCMB)
+            sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
+            plt.scatter(nu_total_array*HztoGHz,sigma_b_array)
+            
+        if (run_type == "HYBRID"):
+            rms_values = np.asarray([0.36, 0.27])*(np.sqrt(80)/(np.sqrt(self.time/3600)))
+            frequencies = [145,250]
+            nu_total_array = np.array(frequencies)*GHztoHz
+            x = h_p*nu_total_array/(k_b*TCMB)
+            sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
+            plt.scatter(nu_total_array*HztoGHz,sigma_b_array)
+            ncolor = len(self.bands)-2
+            color=iter(cm.gray_r(np.linspace(1,0.8,ncolor+1)))
+            for bb in range(ncolor):
+                b1 = self.bands[bb+2]
+                nu_vec_b1, sigma_B_b1 = sigB(b1, self.time)
+
+                colr=next(color)
+                plt.plot(nu_vec_b1*HztoGHz, sigma_B_b1,'o', lw=7, alpha=1, color='maroon')
+            
+            
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel('GHz',fontsize=20)
+        plt.ylabel('W/m^2/Hz/Sr',fontsize=20)
+
+        #Make xticks match as best as possible
+        plt.xticks(np.rint(np.logspace(np.log10(80), np.log10(7.2e2),num=9)),np.rint(np.logspace(np.log10(80), np.log10(7.2e2),num=9)))
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', frameon=True, prop={'size':12}, ncol=1, title= '{} hour obs.'.format(self.time/3600))
+        plt.show()
         return None
-    def Contour_Plot_Projection():
-        return None
+    
+    def Contour_Plot_Projection(self, run_number):
+        
+        # Read simulation output, change directory 
+        df = pd.read_csv('/data/bolocam/bolocam/erapaport/mcmc_run_{}'.format(run_number),header=None) 
+        data = df.to_numpy()
+        
+        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on 009_parameters
+        new_data = data[1:,:]
+        for i in range(len(bad_indices)):
+            new_data = np.concatenate((new_data[:8000*(bad_indices[i]),:],new_data[8000*((bad_indices[i])+1):,:]),axis=0)
+            
+        labels = ('y','temperature','betac','amp_sides','b_sides')
+        theta = (self.y_value, self.electron_temperature, self.peculiar_velocity, self.amp_sides, self.b_sides)
+
+        #Plot contour plot
+        fig = corner.corner(
+        new_data[:,:], labels=labels, truths=theta, smooth = 0
+        );
+        
+        return fig, new_data
+    
+    def Contour_Plot_Double_Projection(self, run_number1, run_number2):
+        
+        # Read simulation output, change directory 
+        df1 = pd.read_csv('/data/bolocam/bolocam/erapaport/mcmc_run_{}'.format(run_number1),header=None) 
+        data1 = df1.to_numpy()
+        
+        df2 = pd.read_csv('/data/bolocam/bolocam/erapaport/mcmc_run_{}'.format(run_number2),header=None) 
+        data2 = df2.to_numpy()
+        
+        chainLabels = ["Run {}".format(run_number1),
+               "Run {}".format(run_number2)]
+        
+        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on 009_parameters
+        
+        new_data1 = data1[1:,:]
+        new_data2 = data2[1:,:]
+
+        for i in range(len(bad_indices)):
+            new_data1 = np.concatenate((new_data1[:8000*(bad_indices[i]),:],new_data1[8000*((bad_indices[i])+1):,:]),axis=0)
+            
+        for i in range(len(bad_indices)):
+            new_data2 = np.concatenate((new_data2[:8000*(bad_indices[i]),:],new_data2[8000*((bad_indices[i])+1):,:]),axis=0)
+
+        labels = ('y','temperature','betac','amp_sides','b_sides')
+        theta = (self.y_value, self.electron_temperature, self.peculiar_velocity, self.amp_sides, self.b_sides)
+
+        #Plot contour plot
+        GTC = pygtc.plotGTC(chains=[new_data1,new_data2], chainLabels=chainLabels, truths=theta, paramNames = labels,figureSize=10)
+        
+        return GTC, new_data1, new_data2

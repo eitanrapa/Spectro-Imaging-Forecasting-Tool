@@ -252,7 +252,7 @@ class Spectral_Simulation_SOFTS:
     def run_sim(self, run_number, run_type, chain_length = 10000, walkers = 100, realizations = 40, discard_n = 2000, thin_n = 100, processors_pool = 30):   
         
         #Read saved parameters file
-        df = pd.read_csv('/data/bolocam/bolocam/erapaport/mcmc_run009_parameters',header=None) 
+        df = pd.read_csv('/data/bolocam/bolocam/erapaport/parameter_file',header=None) 
         params = df.to_numpy()
 
         samples = [[0,0,0,0,0]]
@@ -343,7 +343,7 @@ class Spectral_Simulation_SOFTS:
         df = pd.read_csv('/data/bolocam/bolocam/erapaport/mcmc_run_{}'.format(run_number),header=None) 
         data = df.to_numpy()
         
-        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on 009_parameters
+        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on parameter_file
         new_data = data[1:,:]
         for i in range(len(bad_indices)):
             new_data = np.concatenate((new_data[:8000*(bad_indices[i]),:],new_data[8000*((bad_indices[i])+1):,:]),axis=0)
@@ -370,7 +370,7 @@ class Spectral_Simulation_SOFTS:
         chainLabels = ["Run {}".format(run_number1),
                "Run {}".format(run_number2)]
         
-        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on 009_parameters
+        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on parameter_file
         
         new_data1 = data1[1:,:]
         new_data2 = data2[1:,:]

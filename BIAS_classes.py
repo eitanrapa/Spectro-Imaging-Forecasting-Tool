@@ -1,6 +1,7 @@
 import numpy as np
 import math
 import sys, os
+# Make sure to append SZpack path
 sys.path.append("/home/bolocam/erapaport/Spectro-Imaging-Forecasting-Tool/codes/SZpack.v1.1.1/python")
 sys.path.append("/home/bolocam/erapaport/BIAS/Auxiliary")
 import Mather_photonNEP12a as NEP
@@ -45,7 +46,7 @@ def sigB(band_details, Time):
     nu_vec = np.linspace(nu_min, nu_max, Nse)
     AOnu = (c/nu_vec)**2
     
-    #Defined empirically
+    #Defined empirically to match OLIMPO inefficiencies at single channel bands
     inefficiency = 0.019
     delP = 2.0*NEP_tot/np.sqrt(Time*Npx)
     sigma_B = delP/(AOnu)/nu_res/inefficiency
@@ -60,10 +61,10 @@ def dB(dt, frequency):
     return I*(x**4*np.exp(x)/((np.exp(x)-1)**2))*dt
 
 #SZ total integration function
-def szpack_signal(frequency, tau, temperature, betac):
+def szpack_signal(frequency, tau, temperature, peculiar_velocity):
     x_b = (h_p/(k_b * TCMB))*frequency
     original_x_b = (h_p/(k_b * TCMB))*frequency
-    sz.compute_combo_means(x_b,tau,temperature,betac,0,0,0,0)
+    sz.compute_combo_means(x_b,tau,temperature,peculiar_velocity/3e5,0,0,0,0)
     return x_b*13.33914078*(TCMB**3)*(original_x_b**3)*MJyperSrtoSI
 
 #Classical tSZ analytical calculation
@@ -91,7 +92,7 @@ def interpolate(freq, datay, datax):
     return np.exp(new_data)
 
 """
-Define classes for SOFTS,OLIMPO,Hybrid Sims
+Define classes for SOFTS, OLIMPO, Hybrid Sims
 """
 
 class Spectral_Simulation_SOFTS:
@@ -107,7 +108,7 @@ class Spectral_Simulation_SOFTS:
     
     #Model used for MCMC calculation
     def model(self, theta, anisotropies, freq):
-        y, temperature, betac, amp_sides, b_sides = theta
+        y, temperature, peculiar_velocity, amp_sides, b_sides = theta
         ksz_anis, tsz_anis, cmb_anis = anisotropies
         
         #Read SIDES average model
@@ -121,7 +122,7 @@ class Spectral_Simulation_SOFTS:
     
         #CMB and galaxy cluster SZ template
         cmb_template = dB(cmb_anis + ksz_anis,freq)
-        sz_template = szpack_signal(freq, y_to_tau(y + tsz_anis,temperature), temperature, betac)
+        sz_template = szpack_signal(freq, y_to_tau(y + tsz_anis,temperature), temperature, peculiar_velocity)
     
         template_total = sz_template + sides_template + cmb_template
         return template_total
@@ -156,11 +157,11 @@ class Spectral_Simulation_SOFTS:
     
     #Change priors if needed
     def log_prior(self, theta):
-        y, temperature, betac, amp_sides, b_sides = theta
+        y, temperature, peculiar_velocity, amp_sides, b_sides = theta
     
         if (y < 0 or y > 0.1):
             return -np.inf
-        if (betac < -0.02 or betac > 0.02):
+        if ((peculiar_velocity/3e5) < -0.02 or (peculiar_velocity/3e5) > 0.02):
             return -np.inf
         #if (temperature < 2.73 or temperature > 20):
         #    return -np.inf
@@ -189,6 +190,7 @@ class Spectral_Simulation_SOFTS:
     
         if (run_type == "SOFTS"):
             #Create list of frequencies and NESB 
+            #Use SOFTS function to calculate Sig b
             for bb in range(len(self.bands)):
                 b = self.bands[bb]
                 nu_vec_b, sigma_B_b = sigB(b, self.time)
@@ -196,13 +198,15 @@ class Spectral_Simulation_SOFTS:
                 sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b),axis=None)
        
         if (run_type == "OLIMPO"):
-                rms_values = np.asarray([0.36, 0.27, 0.70, 1.76])*(np.sqrt(80)/(np.sqrt(self.time/3600)))
-                frequencies = [145,250,365,460]
-                nu_total_array = np.array(frequencies)*GHztoHz
-                x = h_p*nu_total_array/(k_b*TCMB)
-                sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
+            #Use RMS values from calculation of 80 hour case using OLIMPO definitions
+            rms_values = np.asarray([0.36, 0.27, 0.70, 1.76])*(np.sqrt(80)/(np.sqrt(self.time/3600)))
+            frequencies = [145,250,365,460]
+            nu_total_array = np.array(frequencies)*GHztoHz
+            x = h_p*nu_total_array/(k_b*TCMB)
+            sigma_b_array = 2*k_b*((nu_total_array/c)**2)*(x/(np.exp(x)-1))*(x*np.exp(x))/(np.exp(x)-1)*np.array(rms_values)*1e-6
     
         if (run_type == "HYBRID"):
+            #Take 2 first channels as OLIMPO channels, and then the rest as SOFTS channels
             rms_values = np.asarray([0.36, 0.27])*(np.sqrt(80)/(np.sqrt(self.time/3600)))
             frequencies = [145,250]
             nu_total_array = np.array(frequencies)*GHztoHz
@@ -273,8 +277,9 @@ class Spectral_Simulation_SOFTS:
             write = csv.writer(f)
             write.writerows(samples)
     
+    #Function to plot the spectra and OLIMPO, SOFTS bands
     def Differential_Intensity_Projection(self, run_type, long, lat):
-        labels = ('tau','temperature','betac','amp_sides','b_sides')
+        labels = ('tau','temperature','peculiar_velocity','amp_sides','b_sides')
         freq = np.linspace(80e9,720e9,1000)
         templates_complete = self.templates(freq, long, lat)
   
@@ -337,18 +342,21 @@ class Spectral_Simulation_SOFTS:
         plt.show()
         return None
     
+    # Function to plot contour plots of run
     def Contour_Plot_Projection(self, run_number):
         
         # Read simulation output, change directory 
         df = pd.read_csv('/data/bolocam/bolocam/erapaport/mcmc_run_{}'.format(run_number),header=None) 
         data = df.to_numpy()
         
-        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on parameter_file
+        # Chain length - discard number = 8000
+        
+        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification discarding bright points, dependent on parameter_file
         new_data = data[1:,:]
         for i in range(len(bad_indices)):
             new_data = np.concatenate((new_data[:8000*(bad_indices[i]),:],new_data[8000*((bad_indices[i])+1):,:]),axis=0)
             
-        labels = ('y','temperature','betac','amp_sides','b_sides')
+        labels = ('y','temperature','peculiar_velocity','amp_sides','b_sides')
         theta = (self.y_value, self.electron_temperature, self.peculiar_velocity, self.amp_sides, self.b_sides)
 
         #Plot contour plot
@@ -358,6 +366,7 @@ class Spectral_Simulation_SOFTS:
         
         return fig, new_data
     
+    # Function to plot comparisons of 2 runs
     def Contour_Plot_Double_Projection(self, run_number1, run_number2):
         
         # Read simulation output, change directory 
@@ -370,18 +379,20 @@ class Spectral_Simulation_SOFTS:
         chainLabels = ["Run {}".format(run_number1),
                "Run {}".format(run_number2)]
         
-        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification, dependent on parameter_file
+        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification discarding bright points, dependent on parameter_file
         
         new_data1 = data1[1:,:]
         new_data2 = data2[1:,:]
 
+        # Chain length - discard number = 8000
+        
         for i in range(len(bad_indices)):
             new_data1 = np.concatenate((new_data1[:8000*(bad_indices[i]),:],new_data1[8000*((bad_indices[i])+1):,:]),axis=0)
             
         for i in range(len(bad_indices)):
             new_data2 = np.concatenate((new_data2[:8000*(bad_indices[i]),:],new_data2[8000*((bad_indices[i])+1):,:]),axis=0)
 
-        labels = ('y','temperature','betac','amp_sides','b_sides')
+        labels = ('y','temperature','peculiar_vel','amp_sides','b_sides')
         theta = (self.y_value, self.electron_temperature, self.peculiar_velocity, self.amp_sides, self.b_sides)
 
         #Plot contour plot

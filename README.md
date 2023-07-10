@@ -5,9 +5,9 @@ Includes CIB contamination with SIDES catalog, and CMB anisotropies as contamina
 Resolves for y-value, electron temperature, peculiar velocity, and profile of CIB. 
 
 Requires SZpack for use.
-Also requires Pandas, AstroPy, NumPy, Matplotlib, Corner, Emcee, SciPy, multiprocessing.
+Also requires Pandas, AstroPy, NumPy, Matplotlib, Corner, Emcee, SciPy, multiprocessing, pygtc
 
-Requires particular files:
+# Requires particular files:
 
 sides.csv:
 
@@ -22,3 +22,14 @@ CMB values are taken from CMB.fits, taken from NASA website with real CMB values
 continuum.fits:
 
 Spectra of CIB from SIDES catalog
+
+Mather_photonNEP12a.py:
+
+File to calculate photon NEP.
+
+# TO RUN:
+
+1. Modify main_script.py to select for parameters and settings
+2. If needed, change OLIMPO RMS, center frequencies in BIAS_classes.py
+3. Make sure paths for auxiliary files and results are specified correctly in BIAS_classes.py
+3. Run main_script.py, and look at results s

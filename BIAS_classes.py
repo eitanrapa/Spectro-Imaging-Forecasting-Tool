@@ -30,8 +30,31 @@ HztoGHz = 1e-9                                          # Hertz to Gigahertz
 TCMB = 2.725                                            # Canonical CMB in Kelvin
 m = 9.109*10**(-31)                                     # Electron mass in kgs
 
+# #SOFTS function
+# def sigB(band_details, Time):
+#     # Use for apples to apples with OLIMPO photo
+    
+#     BW_GHz = band_details['nu_meanGHz']*band_details['FBW']
+    
+#     nu_min = (band_details['nu_meanGHz'] - 0.5*BW_GHz)*GHztoHz
+#     nu_max = (band_details['nu_meanGHz'] + 0.5*BW_GHz)*GHztoHz
+#     nu_res = band_details['nu_resGHz']*GHztoHz
+#     Npx = band_details['N_pixels']
+    
+#     NEP_tot = (band_details['NEP_aWrtHz'])*1E-18
+#     Nse = int(np.round(BW_GHz/band_details['nu_resGHz']))
+#     nu_vec = np.linspace(nu_min, nu_max, Nse)
+#     AOnu = (c/nu_vec)**2
+    
+#     #Defined empirically to match OLIMPO inefficiencies at single channel bands
+#     inefficiency = 0.019
+#     delP = 2.0*NEP_tot/np.sqrt(Time*Npx)
+#     sigma_B = delP/(AOnu)/nu_res/inefficiency
+
+#     return nu_vec, sigma_B
+
 #SOFTS function
-def sigB(band_details, Time):
+def sigB(band_details, Time, Tnoise=3.0):
     # Use for apples to apples with OLIMPO photo
     
     BW_GHz = band_details['nu_meanGHz']*band_details['FBW']
@@ -41,7 +64,11 @@ def sigB(band_details, Time):
     nu_res = band_details['nu_resGHz']*GHztoHz
     Npx = band_details['N_pixels']
     
-    NEP_tot = (band_details['NEP_aWrtHz'])*1E-18
+    NEP_phot1 = NEP.photonNEPdifflim(nu_min, nu_max, Tnoise) #This is CMB Tnoise
+    NEP_phot2 = NEP.photonNEPdifflim(nu_min, nu_max, 10.0, aef=0.01) #Use real south pole data
+    NEP_det = 10e-18 # ATTO WATTS per square-root(hz)
+    NEP_tot = np.sqrt(NEP_phot1**2 + NEP_phot2**2 + NEP_det**2) #Dont include atmosphere for now
+    # in making nu_vec we must be aware of resolution
     Nse = int(np.round(BW_GHz/band_details['nu_resGHz']))
     nu_vec = np.linspace(nu_min, nu_max, Nse)
     AOnu = (c/nu_vec)**2
@@ -224,7 +251,7 @@ class Spectral_Simulation_SOFTS:
         image_data = hdu[0].data
     
         total_SIDES = np.zeros(751)
-        #Rebinning for 3 arcmin resolution
+        #Rebinning for 3.0 arcmin resolution
         for col in range(6):
             for row in range(6):
                 total_SIDES += image_data[:,long + row,lang + col]*MJyperSrtoSI
@@ -253,7 +280,7 @@ class Spectral_Simulation_SOFTS:
         
         return sampler
     
-    def run_sim(self, run_number, run_type, chain_length = 10000, walkers = 100, realizations = 40, discard_n = 2000, thin_n = 100, processors_pool = 30):   
+    def run_sim(self, run_number, run_type, chain_length = 15000, walkers = 200, realizations = 1, discard_n = 7000, thin_n = 100, processors_pool = 30):   
         
         #Read saved parameters file
         df = pd.read_csv('/data/bolocam/bolocam/erapaport/parameter_file',header=None) 
@@ -263,6 +290,7 @@ class Spectral_Simulation_SOFTS:
         samples = np.asarray(samples)
 
         for i in range(realizations):
+            i = 2
             amp_cmb = params[i,5]
             sides_long = int(params[i,3])
             sides_lat = int(params[i,4])
@@ -280,12 +308,13 @@ class Spectral_Simulation_SOFTS:
     #Function to plot the spectra and OLIMPO, SOFTS bands
     def Differential_Intensity_Projection(self, run_type, long, lat):
         labels = ('tau','temperature','peculiar_velocity','amp_sides','b_sides')
-        freq = np.linspace(80e9,720e9,1000)
+        #freq = np.linspace(80e9,720e9,1000)
+        freq = np.linspace(80e9,1000e9,1000)
         templates_complete = self.templates(freq, long, lat)
   
         plt.rc('xtick',labelsize=18)
         plt.rc('ytick',labelsize=18)
-        plt.figure(figsize=(10,10))
+        fig = plt.figure(figsize=(10,10))
   
         #Plot SZ components
         plt.plot(freq*HztoGHz,abs(templates_complete[0]),'--k',label='Total SZ',linewidth=2)
@@ -337,8 +366,9 @@ class Spectral_Simulation_SOFTS:
         plt.ylabel('W/m^2/Hz/Sr',fontsize=20)
 
         #Make xticks match as best as possible
-        plt.xticks(np.rint(np.logspace(np.log10(80), np.log10(7.2e2),num=9)),np.rint(np.logspace(np.log10(80), np.log10(7.2e2),num=9)))
+        plt.xticks(np.rint(np.logspace(np.log10(80), np.log10(1e3),num=9)),np.rint(np.logspace(np.log10(80), np.log10(1e3),num=9)))
         plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', frameon=True, prop={'size':12}, ncol=1, title= '{} hour obs.'.format(self.time/3600))
+        fig.savefig('temp.png', transparent=True)
         plt.show()
         return None
     
@@ -351,7 +381,7 @@ class Spectral_Simulation_SOFTS:
         
         # Chain length - discard number = 8000
         
-        bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification discarding bright points, dependent on parameter_file
+        bad_indices = []#[0,3,7,10,17,18,24,28,28,23] #manual modification discarding bright points, dependent on parameter_file
         new_data = data[1:,:]
         for i in range(len(bad_indices)):
             new_data = np.concatenate((new_data[:8000*(bad_indices[i]),:],new_data[8000*((bad_indices[i])+1):,:]),axis=0)

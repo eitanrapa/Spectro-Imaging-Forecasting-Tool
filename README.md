@@ -29,7 +29,18 @@ File to calculate photon NEP.
 
 # TO RUN:
 
-1. Modify main_script.py to select for parameters and settings
+1. Modify run_script.py to select for parameters and settings
 2. If needed, change OLIMPO RMS, center frequencies in BIAS_classes.py
-3. Make sure paths for auxiliary files and results are specified correctly in BIAS_classes.py
-3. Run main_script.py, and look at results s
+3. Make sure paths for auxiliary files and results are specified correctly in SIFT_classes.py
+3. Run run_script.py, and look at results
+
+# TO DO 
+
+-Find a way to remove bright spots methodically
+-Make the arcmin changeable per band
+-Make a function to create prior parameters
+-Determine inefficiencies methodically
+-Determine foreground parameters methodically
+-Make parameter making function
+-Attach parameter data (parameters, band information) to each run
+-Optional CMB fitting

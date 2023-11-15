@@ -77,15 +77,8 @@ def Differential_Intensity_Projection(y_value, electron_temperature, peculiar_ve
 def Contour_Plot_Projection(run_number, y_value, electron_temperature, peculiar_velocity, a_sides=1, b_sides=1):
         
     # Read simulation output, change directory 
-    df = pd.read_csv('/bolocam/bolocam/erapaport/runs/mcmc_run_{}'.format(run_number),header=None) 
+    df = pd.read_csv('/bolocam/bolocam/erapaport/new_runs/run_{}'.format(run_number),header=None) 
     data = df.to_numpy()
-        
-    # Chain length - discard number = 8000
-       
-#         bad_indices = []#[0,3,7,10,17,18,24,28,28,23] #manual modification discarding bright points, dependent on parameter_file
-#         new_data = data
-#         for i in range(len(bad_indices)):
-#             new_data = np.concatenate((new_data[:8000*(bad_indices[i]),:],new_data[8000*((bad_indices[i])+1):,:]),axis=0)
             
     labels = ('y','temperature','peculiar_velocity','a_sides','b_sides')
     theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides)
@@ -101,25 +94,15 @@ def Contour_Plot_Projection(run_number, y_value, electron_temperature, peculiar_
 def Contour_Plot_Double_Projection(run_number1, run_number2, y_value, electron_temperature, peculiar_velocity, a_sides=1, b_sides=1):
     
     # Read simulation output, change directory 
-    df1 = pd.read_csv('/bolocam/bolocam/erapaport/runs/mcmc_run_{}'.format(run_number1),header=None) 
+    df1 = pd.read_csv('/bolocam/bolocam/erapaport/new_runs/run_{}'.format(run_number1),header=None) 
     data1 = df1.to_numpy()
         
-    df2 = pd.read_csv('/bolocam/bolocam/erapaport/runs/mcmc_run_{}'.format(run_number2),header=None) 
+    df2 = pd.read_csv('/bolocam/bolocam/erapaport/new_runs/run_{}'.format(run_number2),header=None) 
     data2 = df2.to_numpy()
         
     chainLabels = ["Run {}".format(run_number1),
            "Run {}".format(run_number2)]
         
-#     bad_indices = [0,3,7,10,17,18,24,28,28,23] #manual modification discarding bright points, dependent on parameter_file
-
-    # Chain length - discard number = 8000
-        
-#     for i in range(len(bad_indices)):
-#         new_data1 = np.concatenate((new_data1[:8000*(bad_indices[i]),:],new_data1[8000*((bad_indices[i])+1):,:]),axis=0)
-            
-#     for i in range(len(bad_indices)):
-#         new_data2 = np.concatenate((new_data2[:8000*(bad_indices[i]),:],new_data2[8000*((bad_indices[i])+1):,:]),axis=0)
-
     labels = ('y','temperature','peculiar_vel','a_sides','b_sides')
     theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides)
 
@@ -131,7 +114,7 @@ def Contour_Plot_Double_Projection(run_number1, run_number2, y_value, electron_t
 def Chain_Projection(run_number, y_value, electron_temperature, peculiar_velocity, a_sides=1, b_sides=1):
         
     # Read simulation output, change directory 
-    df = pd.read_csv('/bolocam/bolocam/erapaport/runs/mcmc_run_{}'.format(run_number),header=None) 
+    df = pd.read_csv('/bolocam/bolocam/erapaport/new_runs/run_{}'.format(run_number),header=None) 
     data = df.to_numpy()
         
     labels = ('y','temperature','peculiar_velocity','a_sides','b_sides')

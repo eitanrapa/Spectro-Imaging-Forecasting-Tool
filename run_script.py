@@ -142,36 +142,19 @@ betac = [peculiar_vel/(3e5)]
 # run_names_hybrid_three = ["test5000_third_three"]
 # run_names_hybrid_four = ["test5000_fifth_three"]
 
-run_name = ['test_123']
+run_name = ['test_002']
 
 # Integration times for each run
-times = [288000] #Seconds
+#times = [288000] #Seconds
+times = [288000000000] #Seconds
      
 # Loop over runs, define number of processors to use
 for i in range(1):
-#     biasclass = BIAS.Spectral_Simulation_SOFTS(y[i], electron_temperature[i], peculiar_vel, Bands_list_three_chan, times[i])
-#     biasclass.run_sim(run_names_phot[i], "OLIMPO", processors_pool = 30)
-    
-#     biasclass = BIAS.Spectral_Simulation_SOFTS(y[i], electron_temperature[i], peculiar_vel, Bands_list_three_chan, times[i])
-#     biasclass.run_sim(run_names_three[i], "SOFTS", processors_pool = 20)
-    
-#     biasclass = BIAS.Spectral_Simulation_SOFTS(y[i], electron_temperature[i], peculiar_vel, Bands_list_five_chan, times[i])
-#     biasclass.run_sim(run_names_five[i], "SOFTS", processors_pool = 20)
-    
-#     biasclass = BIAS.Spectral_Simulation_SOFTS(y[i], electron_temperature[i], peculiar_vel, Bands_list_hybrid_first_band_single, times[i])
-#     biasclass.run_sim(run_names_hybrid_one[i], "HYBRID", processors_pool = 30)
-    
-#     biasclass = BIAS.Spectral_Simulation_SOFTS(y[i], electron_temperature[i], peculiar_vel, Bands_list_hybrid_first_band_nofifth, times[i])
-#     biasclass.run_sim(run_names_hybrid_two[i], "HYBRID", processors_pool = 30)
-
-#     biasclass = BIAS.Spectral_Simulation_SOFTS(y[i], electron_temperature[i], peculiar_vel, Bands_list_hybrid_first_band_third, times[i])
-#     biasclass.run_sim(run_names_hybrid_three[i], "HYBRID", processors_pool = 30)
-    
-#     biasclass = BIAS.Spectral_Simulation_SOFTS(y[i], electron_temperature[i], peculiar_vel, Bands_list_hybrid_first_band_fifth, times[i])
-#     biasclass.run_sim(run_names_hybrid_four[i], "HYBRID", processors_pool = 30)
-
-      siftclass = SIFT.Spectral_Simulation(y[i], electron_temperature[i], peculiar_vel, Bands_list_hybrid_first_band_third, times[i])
-      siftclass.run_sim(run_name[i], processors_pool = 30)
+    siftclass = SIFT.Spectral_Simulation(y[i], electron_temperature[i], peculiar_vel, Bands_list_hybrid_first_band_third, times[i])
+    siftclass.run_sim(run_name[i], processors_pool = 20)
+        
+#     siftclass = SIFT.Spectral_Simulation_CMB(y[i], electron_temperature[i], peculiar_vel, Bands_list_hybrid_first_band_third, times[i])
+#     siftclass.run_sim(run_name[i], processors_pool = 30)
                                        
     
     

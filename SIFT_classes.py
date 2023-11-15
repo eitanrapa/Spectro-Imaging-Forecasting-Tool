@@ -162,18 +162,15 @@ class Spectral_Simulation:
         self.b_sides = b_sides
     
     #Model used for MCMC calculation
-    def model(self, theta, anisotropies, freq):
+    def model(self, theta, freq):
         y, temperature, peculiar_velocity, a_sides, b_sides = theta
-        ksz_anis, tsz_anis, cmb_anis = anisotropies
         
         #SIDES
         sides_template = SIDES_average(freq, a_sides, b_sides)
+
+        sz_template = szpack_signal(freq, y_to_tau(y, temperature), temperature, peculiar_velocity)
     
-        #CMB and galaxy cluster SZ template
-        cmb_template = dB(cmb_anis + ksz_anis,freq)
-        sz_template = szpack_signal(freq, y_to_tau(y + tsz_anis, temperature), temperature, peculiar_velocity)
-    
-        template_total = sz_template + sides_template + cmb_template
+        template_total = sz_template + sides_template
         return template_total
     
     #Individual templates for plotting using SIDES fits data
@@ -187,8 +184,8 @@ class Spectral_Simulation:
         template_total = [sz_template, sides_template]
         return template_total
     
-    def log_likelihood(self, theta, anisotropies, freq, data, noise):
-        modeldata = self.model(theta, anisotropies, freq)
+    def log_likelihood(self, theta, freq, data, noise):
+        modeldata = self.model(theta, freq)
         return -0.5 * np.sum(((data - modeldata)/noise)**2)
     
     #Change priors if needed
@@ -198,6 +195,8 @@ class Spectral_Simulation:
         if (y < 0 or y > 0.1):
             return -np.inf
         if ((peculiar_velocity/3e5) < -0.02 or (peculiar_velocity/3e5) > 0.02):
+            return -np.inf
+        if (temperature <  2.0  or temperature > 75.0):
             return -np.inf
         if (a_sides < 0 or a_sides > 2.5):
             return -np.inf
@@ -209,11 +208,11 @@ class Spectral_Simulation:
         #Gaussian prior on temperature with mean of mu and std. deviation of sigma
         return np.log(1.0/(np.sqrt(2*np.pi)*sigma))-0.5*(temperature-mu)**2/sigma**2
     
-    def log_probability(self, theta, anisotropies, freq, data, noise):
+    def log_probability(self, theta, freq, data, noise):
         lp = self.log_prior(theta)
         if not np.isfinite(lp):
             return -np.inf
-        return lp + self.log_likelihood(theta, anisotropies, freq, data, noise)  
+        return lp + self.log_likelihood(theta, freq, data, noise)  
     
     def mcmc(self, anisotropies, long, lat, walkers, processors, chain_length):
         ksz_anis, tsz_anis, cmb_anis = anisotropies
@@ -239,9 +238,11 @@ class Spectral_Simulation:
         sides_template = SIDES_continuum(nu_total_array, long, lat)
     
         #CMB and galaxy cluster SZ template
-        sz_template = szpack_signal(nu_total_array,y_to_tau(self.y_value + tsz_anis, self.electron_temperature), self.electron_temperature, self.peculiar_velocity)
-        cmb_template = dB(cmb_anis + ksz_anis, nu_total_array)
-        total_sz_array = sz_template + cmb_template + sides_template
+        sz_template = szpack_signal(nu_total_array,y_to_tau(self.y_value, self.electron_temperature), self.electron_temperature, self.peculiar_velocity)
+        tsz_template = classical_tsz(tsz_anis, nu_total_array)
+        cmb_template = dB(cmb_anis, nu_total_array)
+        ksz_template = dB(ksz_anis, nu_total_array)
+        total_sz_array = sz_template + cmb_template + sides_template + ksz_anis + tsz_template
         
         theta = self.y_value, self.electron_temperature, self.peculiar_velocity, self.a_sides, self.b_sides
         pos = []
@@ -252,28 +253,27 @@ class Spectral_Simulation:
         nwalkers, ndim = pos_array.shape
 
         with Pool(processors) as pool:
-            sampler = emcee.EnsembleSampler(nwalkers, ndim, self.log_probability, args=(anisotropies, nu_total_array, total_sz_array, sigma_b_array),pool=pool)
+            sampler = emcee.EnsembleSampler(nwalkers, ndim, self.log_probability, args=(nu_total_array, total_sz_array, sigma_b_array),pool=pool)
             for sample in sampler.sample(pos_array, iterations=chain_length, progress=True):
                 continue
         
         return sampler
     
-    def run_sim(self, run_number, chain_length = 10000, walkers = 100, realizations = 1, discard_n = 2000, thin_n = 100, processors_pool = 30):   
+    def run_sim(self, run_number, chain_length = 10000, walkers = 100, realizations = 100, discard_n = 2000, thin_n = 100, processors_pool = 30):   
         
         #Read saved parameters file
-        df = pd.read_csv('/bolocam/bolocam/erapaport/Auxiliary/parameter_file',header=None) 
+        df = pd.read_csv('/bolocam/bolocam/erapaport/Auxiliary/parameter_file_100',header=None) 
         params = df.to_numpy()
 
         samples = [[0,0,0,0,0]]
         samples = np.asarray(samples)
 
         for i in range(realizations):
-            i = 2
-            amp_cmb = params[i,5]
-            sides_long = int(params[i,3])
-            sides_lat = int(params[i,4])
-            amp_ksz = params[i,6]
-            amp_tsz= params[i,7]
+            sides_long = int(params[i,0])
+            sides_lat = int(params[i,1])
+            amp_cmb = params[i,2]
+            amp_ksz = params[i,3]
+            amp_tsz= params[i,4]
             anisotropies = (amp_ksz, amp_tsz, amp_cmb)
             sampler = self.mcmc(anisotropies, sides_long, sides_lat, walkers, processors_pool, chain_length)
             samples = np.append(samples,sampler.get_chain(discard=discard_n, flat=True, thin=thin_n),axis=0)
@@ -281,6 +281,6 @@ class Spectral_Simulation:
         samples = samples[1:,:]
            
         #Write simulation output, change directory/name
-        with open('/bolocam/bolocam/erapaport/runs/mcmc_run_{}'.format(run_number), 'w') as f:
+        with open('/bolocam/bolocam/erapaport/new_runs/run_{}'.format(run_number), 'w') as f:
             write = csv.writer(f)
             write.writerows(samples)

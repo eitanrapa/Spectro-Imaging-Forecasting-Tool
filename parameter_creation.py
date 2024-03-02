@@ -1,4 +1,3 @@
-import csv
 import numpy as np
 import camb
 
@@ -8,7 +7,9 @@ np.random.seed(seed)
 
 def create_cmb_map(resolution=3.0):
     """
-
+    Creates a map of the CMB anisotropies using CAMB.
+    :param resolution: resolution of the map in arcmin
+    :return: a cmb map in Kelvin
     """
 
     # Set up a new set of parameters for CAMB
@@ -83,9 +84,11 @@ def create_cmb_map(resolution=3.0):
     return CMB_T
 
 
-def create_parameter_file(cmb_resolution, file_name):
+def create_parameter_file(cmb_resolution, realizations):
     """
-
+    Creates a file of fiducial parameters for contaminants including CMB, CIB, and secondary tsz and ksz.
+    :param cmb_resolution: resolution of the CMB anisotropy sampling in arcmin
+    :param realizations: amount of realizations
     """
 
     params = [[0, 0, 0, 0, 0]]
@@ -94,7 +97,8 @@ def create_parameter_file(cmb_resolution, file_name):
     # Create CMB map
     CMB_T = create_cmb_map(cmb_resolution)
 
-    for i in range(500):  # Make 500 realizations of parameters
+    # Make realizations
+    for i in range(realizations):
 
         # Pick coordinates of SIDES continuum
         sides_long = np.random.randint(0, 160)
@@ -104,11 +108,12 @@ def create_parameter_file(cmb_resolution, file_name):
         cmb_long = np.random.randint(2, 1000)
         cmb_lat = np.random.randint(2, 1000)
 
-        # Inpainting of 5x5 3 arcmin pixels
+        # Inpainting of 5x5
         amp_cmb = CMB_T[cmb_long, cmb_lat] * 1e-6
         amp_cmb = amp_cmb - np.mean(CMB_T[cmb_long - 2:cmb_long + 3, cmb_lat - 2:cmb_lat + 3])
 
         # Make CMB secondary anisotropies
+        # Numbers determined empirically
         amp_ksz = np.random.normal(0, 6e-7)
         amp_tsz = np.random.normal(0, 6e-7)
 
@@ -118,7 +123,4 @@ def create_parameter_file(cmb_resolution, file_name):
     params = params[1:, :]
 
     # Write simulation output, change directory/name
-
-    with open('/bolocam/bolocam/erapaport/Auxiliary/' + file_name, 'w') as f:
-        write = csv.writer(f)
-        write.writerows(params)
+    np.save('/bolocam/bolocam/erapaport/Auxiliary/parameter_file_' + str(realizations), params, allow_pickle=True)

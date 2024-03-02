@@ -1,7 +1,7 @@
 import numpy as np
 import sys
 import pandas as pd
-import csv
+import pickle
 import emcee
 from astropy.io import fits
 from scipy.interpolate import interp1d
@@ -13,9 +13,6 @@ sys.path.append("/bolocam/bolocam/erapaport/Auxiliary/")
 import Mather_photonNEP12a as NEP
 import SZpack as SZ
 
-'''
-Cosmological terms from G. Sun
-'''
 
 c = 299792458.0  # Speed of light - [c] = m/s
 h_p = 6.626068e-34  # Planck's constant in SI units
@@ -27,9 +24,10 @@ TCMB = 2.725  # Canonical CMB in Kelvin
 m = 9.109 * 10 ** (-31)  # Electron mass in kgs
 
 
-# # Noise Equivalent Brightness function with known NEPs
 # def sigB(band_details, time):
-#     # Use for apples to apples with OLIMPO photo
+#     """
+#     Noise Equivalent Brightness function with known NEPs
+#     """
 #
 #     BW_GHz = band_details['nu_meanGHz'] * band_details['FBW']
 #
@@ -50,11 +48,15 @@ m = 9.109 * 10 ** (-31)  # Electron mass in kgs
 #
 #     return nu_vec, sigma_B
 
+def sig_b(band_details, time, tnoise=3.0):
+    """
+    Noise Equivalent Brightness function with unknown NEPs.
+    Use for apples to apples with OLIMPO photometric mode.
+    :param band_details: Bands of instrument
+    :param time: Integration time
+    :param tnoise: Thermal noise of CMB
+    """
 
-# Noise Equivalent Brightness function with unknown NEPs
-# Use for apples to apples with OLIMPO photo
-
-def sigB(band_details, time, Tnoise=3.0):
     BW_GHz = band_details['nu_meanGHz'] * band_details['FBW']
 
     nu_min = (band_details['nu_meanGHz'] - 0.5 * BW_GHz) * GHztoHz
@@ -62,10 +64,10 @@ def sigB(band_details, time, Tnoise=3.0):
     nu_res = band_details['nu_resGHz'] * GHztoHz
     Npx = band_details['N_pixels']
 
-    NEP_phot1 = NEP.photonNEPdifflim(nu_min, nu_max, Tnoise)  # This is CMB Tnoise
-    NEP_phot2 = NEP.photonNEPdifflim(nu_min, nu_max, 10.0, aef=0.01)  # Use real south pole data
+    NEP_phot1 = NEP.photonNEPdifflim(nu_min, nu_max, tnoise)  # This is CMB Tnoise
+    NEP_phot2 = NEP.photonNEPdifflim(nu_min, nu_max, 10.0, aef=0.01)  # Use real South Pole data
     NEP_det = 10e-18  # ATTO WATTS per square-root(hz)
-    NEP_tot = np.sqrt(NEP_phot1 ** 2 + NEP_phot2 ** 2 + NEP_det ** 2)  # Dont include atmosphere for now
+    NEP_tot = np.sqrt(NEP_phot1 ** 2 + NEP_phot2 ** 2 + NEP_det ** 2)  # Don't include atmosphere for now
 
     # in making nu_vec we must be aware of resolution
     Nse = int(np.round(BW_GHz / band_details['nu_resGHz']))
@@ -80,30 +82,58 @@ def sigB(band_details, time, Tnoise=3.0):
     return nu_vec, sigma_B
 
 
-# CMB Anisotropy function
-def dB(dt, frequency):
+def d_b(dt, frequency):
+    """
+    Blackbody function.
+    :param dt: Differential temperature
+    :param frequency: Frequency space
+    :return: Spectral brightness distribution
+    """
+
     temp = TCMB / (1 + dt)
     x = (h_p / (k_b * temp)) * frequency
     I = ((2 * h_p) / (c ** 2)) * (k_b * temp / h_p) ** 3
     return I * (x ** 4 * np.exp(x) / ((np.exp(x) - 1) ** 2)) * dt
 
 
-# SZ total integration function
 def szpack_signal(frequency, tau, temperature, peculiar_velocity):
+    """
+    Use SZpack to create an SZ distortion distribution.
+    :param frequency: Frequence space
+    :param tau: Galaxy cluster optical depth
+    :param temperature: Galaxy cluster electron temperature
+    :param peculiar_velocity: Galaxy cluster peculiar velocity
+    :return: Spectral brightness distribution
+    """
+
     x_b = (h_p / (k_b * TCMB)) * frequency
     original_x_b = (h_p / (k_b * TCMB)) * frequency
     SZ.compute_combo_means(x_b, tau, temperature, peculiar_velocity / 3e5, 0, 0, 0, 0)
     return x_b * 13.33914078 * (TCMB ** 3) * (original_x_b ** 3) * MJyperSrtoSI
 
 
-# Classical tSZ analytical calculation
 def classical_tsz(y, frequency):
+    """
+    Calculate the classical tSZ function.
+    :param y: Galaxy cluster y-value
+    :param frequency: Frequency space
+    :return: Spectral brightness distribution
+    """
+
     x_b = (h_p / (k_b * TCMB)) * frequency
     bv = 2 * k_b * TCMB * ((frequency ** 2) / (c ** 2)) * (x_b / (np.exp(x_b) - 1))
     return y * ((x_b * np.exp(x_b)) / (np.exp(x_b) - 1)) * (x_b * ((np.exp(x_b) + 1) / (np.exp(x_b) - 1)) - 4) * bv
 
 
-def SIDES_continuum(freq, long, lat):
+def sides_continuum(freq, long, lat):
+    """
+    Get the spectrum of the CIB using the SIDES catalog.
+    :param freq: Frequency space
+    :param long: Longitudinal coordinates of SIDES
+    :param lat: Longitudes coordinates of SIDES
+    :return: Spectral brightness distortion
+    """
+
     # Read FITS file
     fname = '/bolocam/bolocam/erapaport/Auxiliary/continuum.fits'
     hdu = fits.open(fname)
@@ -124,6 +154,13 @@ def SIDES_continuum(freq, long, lat):
 
 
 def sides_average(freq, a_sides, b_sides):
+    """
+    Get the average spectrum of the CIB across SIDES catalog modified by some shape parameters
+    :param freq: Frequency space
+    :param a_sides: Amplitude modulation of SIDES
+    :param b_sides: Frequency modulation of SIDES
+    """
+
     # Read SIDES average model
     df = pd.read_csv('/bolocam/bolocam/erapaport/Auxiliary/sides.csv', header=None)
     data = df.to_numpy()
@@ -135,28 +172,51 @@ def sides_average(freq, a_sides, b_sides):
     return sides_template
 
 
-# Optical depth to compton-y
 def tau_to_y(tau, temperature):
+    """
+    Convert galaxy cluster optical depth to y-value
+    :param tau: Galaxy cluster optical depth
+    :param temperature: Galaxy cluster temperature
+    :return: Galaxy Cluster y-value
+    """
+
     if tau == 0:
         return 0
     return (tau * (temperature * 11604525.0061598) * k_b) / (m * (c ** 2))
 
 
-# Compton-y to optical depth
 def y_to_tau(y, temperature):
+    """
+    Convert galaxy cluster y-value to optical depth
+    :param y: Galaxy cluster y-value
+    :param temperature: Galaxy cluster temperature
+    :return: Galaxy Cluster optical depth
+    """
+
     if y == 0:
         return 0
     return (m * (c ** 2) * y) / (k_b * (temperature * 11604525.0061598))
 
 
-# Interpolation function
 def interpolate(freq, datay, datax):
-    f = interp1d(np.log(datax), np.log(datay), kind='slinear', bounds_error=False, fill_value=0)
+    """
+    Interpolate between data using a cubic spline
+    :param freq: Frequency space
+    :param datay: Y axis of data
+    :param datax: X axis of data
+    :return: Interpolated values at frequency space
+    """
+
+    f = interp1d(np.log(datax), np.log(datay), kind='cubic', bounds_error=False, fill_value=0)
     new_data = f(np.log(freq))
     return np.exp(new_data)
 
 
 class SpectralSimulation:
+    """
+    This class defines the simulation suite. Initializing requires galaxy cluster parameters, instrument band
+    definitions, and integration time for an observation.
+    """
 
     def __init__(self, y_value, electron_temperature, peculiar_velocity, bands, time, a_sides=1, b_sides=1):
         self.y_value = y_value
@@ -168,43 +228,74 @@ class SpectralSimulation:
         self.b_sides = b_sides
         self.cmb_anis = 0
 
-    # Model used for MCMC calculation
     def model(self, theta, freq):
+        """
+        Model of the MCMC used for the fit.
+        :param theta: Values to constrain in the MCMC
+        :param freq: Frequencies samples
+        :return: Total spectral brightness distribution
+        """
+
         y, temperature, peculiar_velocity, a_sides, b_sides, cmb_anis = theta
 
         # SIDES
         sides_template = sides_average(freq, a_sides, b_sides)
 
+        # SZ
         sz_template = szpack_signal(freq, y_to_tau(y, temperature), temperature, peculiar_velocity)
 
-        cmb_template = dB(cmb_anis, freq)
+        # CMB
+        cmb_template = d_b(cmb_anis, freq)
 
         template_total = sz_template + sides_template + cmb_template
 
         return template_total
 
-    # Individual templates for plotting using SIDES fits data
     def templates(self, freq, long, lat):
+        """
+        Separated individual total templates of the MCMC.
+        :param freq: Frequencies sampled
+        :param long: Longitudinal coordinates of SIDES
+        :param lat: Latitudinal coordinates of SIDES
+        :return: Separated individual spectral brightness distributions
+        """
 
-        sides_template = SIDES_continuum(freq, long, lat)
+        # SIDES
+        sides_template = sides_continuum(freq, long, lat)
 
         # Galaxy cluster SZ template
         sz_template = szpack_signal(freq, y_to_tau(self.y_value, self.electron_temperature), self.electron_temperature,
                                     self.peculiar_velocity)
 
-        cmb_template = dB(self.cmb_anis, freq)
+        # CMB
+        cmb_template = d_b(self.cmb_anis, freq)
 
         template_total = [sz_template, sides_template, cmb_template]
         return template_total
 
     def log_likelihood(self, theta, freq, data, noise):
+        """
+        Log likelihood function of MCMC.
+        :param theta: Values to constrain in the MCMC
+        :param freq: Frequencies samples
+        :param data: Input fiducial observed data
+        :param noise: Noise given by instrument
+        :return: Log likelihood
+        """
+
         model_data = self.model(theta, freq)
         return -0.5 * np.sum(((data - model_data) / noise) ** 2)
 
-    # Change priors if needed
     def log_prior(self, theta):
+        """
+        Log prior function of MCMC
+        :param theta: Values to constrain in the MCMC
+        :return: Infinity if outside prior bounds, or a prior probability otherwise
+        """
+
         y, temperature, peculiar_velocity, a_sides, b_sides, cmb_anis = theta
 
+        # "Top-hat" prior for parameters
         if y < 0 or y > 0.1:
             return -np.inf
         if (peculiar_velocity / 3e5) < -0.02 or (peculiar_velocity / 3e5) > 0.02:
@@ -218,26 +309,48 @@ class SpectralSimulation:
         if cmb_anis < -1e-3 or cmb_anis > 1e-3:
             return -np.inf
 
+        # Gaussian priors for CMB and galaxy cluster temp
         mu_temp = self.electron_temperature
         sigma_temp = self.electron_temperature / 10  # 10% precision
 
         mu_cmb = self.cmb_anis
         sigma_cmb = self.cmb_anis / 10  # 10% precision
 
-        # Gaussian prior on temperature with mean of mu and std. deviation of sigma
+        # Convolved Gaussians in log space
         return np.log(1.0 / (np.sqrt(2 * np.pi) * sigma_temp)) - 0.5 * (
                 temperature - mu_temp) ** 2 / sigma_temp ** 2 + np.log(
             1.0 / (np.sqrt(2 * np.pi) * sigma_cmb)) - 0.5 * (cmb_anis - mu_cmb) ** 2 / sigma_cmb ** 2
 
     def log_probability(self, theta, freq, data, noise):
+        """
+        Log probability function of the MCMC.
+        :param theta: Values to constrain in the MCMC
+        :param freq: Frequencies samples
+        :param data: Input fiducial observed data
+        :param noise: Noise given by instrument
+        :return: Log probability, cutting off infinite probabilities
+        """
+
         lp = self.log_prior(theta)
         if not np.isfinite(lp):
             return -np.inf
         return lp + self.log_likelihood(theta, freq, data, noise)
 
     def mcmc(self, anisotropies, long, lat, walkers, processors, chain_length):
+        """
+        Main MCMC calling function.
+        :param anisotropies: Secondary CMB anisotropies from parameters
+        :param long: Longitudinal coordinates of SIDES
+        :param lat: Latitudinal coordinates of SIDES
+        :param walkers: Number of walkers used for MCMC
+        :param processors: Number of processors to use for MCMC, multiprocessing
+        :param chain_length: Amount of samples to take for each chain
+        :return: The sampler object from emcee with chains
+        """
+
         ksz_anis, tsz_anis = anisotropies
 
+        # Analyze instrument bands
         nu_total_array = np.empty(0)
         sigma_b_array = np.empty(0)
 
@@ -249,26 +362,33 @@ class SpectralSimulation:
                 nu_vec_b = band['nu_meanGHz'] * GHztoHz
                 x = h_p * nu_vec_b / (k_b * TCMB)
                 sigma_B_b = 2 * k_b * ((nu_vec_b / c) ** 2) * (x / (np.exp(x) - 1)) * (x * np.exp(x)) / (
-                        np.exp(x) - 1) * band['rms'] * 1e-6
+                        np.exp(x) - 1) * rms_value * 1e-6
                 nu_total_array = np.concatenate((nu_total_array, nu_vec_b), axis=None)
                 sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b), axis=None)
 
             if band['type'] == 'spectrometric':
 
-                nu_vec_b, sigma_B_b = sigB(band, self.time)
+                nu_vec_b, sigma_B_b = sig_b(band, self.time)
                 nu_total_array = np.concatenate((nu_total_array, nu_vec_b), axis=None)
                 sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b), axis=None)
 
-        sides_template = SIDES_continuum(nu_total_array, long, lat)
+        # SIDES
+        sides_template = sides_continuum(nu_total_array, long, lat)
 
-        # CMB and galaxy cluster SZ template
+        # SZ
         sz_template = szpack_signal(nu_total_array, y_to_tau(self.y_value, self.electron_temperature),
                                     self.electron_temperature, self.peculiar_velocity)
+
+        # CMB
+        cmb_template = d_b(self.cmb_anis, nu_total_array)
+
+        # Secondary anisotropies
         tsz_template = classical_tsz(tsz_anis, nu_total_array)
-        cmb_template = dB(self.cmb_anis, nu_total_array)
-        ksz_template = dB(ksz_anis, nu_total_array)
+        ksz_template = d_b(ksz_anis, nu_total_array)
+
         total_sz_array = sz_template + sides_template + tsz_template + ksz_template + cmb_template
 
+        # Define and run MCMC
         theta = self.y_value, self.electron_temperature, self.peculiar_velocity, self.a_sides, self.b_sides, \
             self.cmb_anis
         pos = []
@@ -288,10 +408,21 @@ class SpectralSimulation:
 
     def run_sim(self, file_name, parameter_file, chain_length=12000, walkers=100, realizations=500, discard_n=2000,
                 thin_n=200, processors_pool=30):
+        """
+        Function used to analyze parameters and chains after calling MCMC.
+        :param file_name: Name of where to save run
+        :param parameter_file: File containing parameters for run
+        :param walkers: Number of walkers used for MCMC
+        :param processors_pool: Number of processors to use for MCMC, multiprocessing
+        :param chain_length: Amount of samples to take for each chain
+        :param realizations: Realizations which to concatenate
+        :param discard_n: Discard first n from chain of MCMC
+        :param thin_n: Discard every n from chain of MCMC
+        :return None, saves run.
+        """
 
         # Read saved parameters file
-        df = pd.read_csv('/bolocam/bolocam/erapaport/Auxiliary/' + parameter_file, header=None)
-        params = df.to_numpy()
+        params = np.load('/bolocam/bolocam/erapaport/Auxiliary/' + parameter_file, allow_pickle=True)
 
         samples = [[0, 0, 0, 0, 0, 0]]
         samples = np.asarray(samples)
@@ -308,7 +439,9 @@ class SpectralSimulation:
 
         samples = samples[1:, :]
 
-        # Write simulation output, change directory/name
-        with open('/bolocam/bolocam/erapaport/new_runs/' + file_name, 'w') as f:
-            write = csv.writer(f)
-            write.writerows(samples)
+        # Write simulation output
+        np.save('/bolocam/bolocam/erapaport/new_runs/' + file_name, samples, allow_pickle=True)
+
+        # Write simulation data
+        with open('/bolocam/bolocam/erapaport/new_runs/' + file_name + '_object', 'wb') as f:
+            pickle.dump(self, f)

@@ -1,13 +1,14 @@
 import numpy as np
 import camb
 
+
 class Parameters:
     """
     """
-    
+
     def __init__(self, file_path):
         self.file_path = file_path
-   
+
     def create_cmb_map(self, angular_resolution, seed=40):
         """
         Creates a map of the CMB anisotropies using CAMB.
@@ -88,10 +89,10 @@ class Parameters:
 
         return CMB_T
 
-
     def create_parameter_file(self, angular_resolution=3.0, realizations=100):
         """
         Creates a file of fiducial parameters for contaminants including CMB, CIB, and secondary tsz and ksz.
+        :param angular_resolution:
         :param realizations: amount of realizations
         """
 
@@ -99,11 +100,10 @@ class Parameters:
         params = np.asarray(params)
 
         # Create CMB map
-        CMB_T = create_cmb_map(angular_resolution=angular_resolution)
+        CMB_T = self.create_cmb_map(angular_resolution=angular_resolution)
 
         # Make realizations
         for i in range(realizations):
-
             # Pick coordinates of SIDES continuum
             # Low and high defined by shape of SIDES catalog given
             sides_long = np.random.randint(low=0, high=160)

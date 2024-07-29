@@ -8,5 +8,7 @@
 // code guard
 #pragma once
 
+// get the headers
+#include "szpack/SZpack.h"
 
 // end of file

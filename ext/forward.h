@@ -16,12 +16,6 @@ namespace sift::py {
     void exceptions(py::module &);
     // version info
     void version(py::module &);
-    // CartesianPoint
-    void cartesianPoint(py::module &);
-    // GeodeticPoint
-    void geodeticPoint(py::module &);
-    // TriaxialEllipsoid
-    void triaxialEllipsoid(py::module &);
 
 }
 

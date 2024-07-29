@@ -7,7 +7,6 @@
 #
 
 
-
 # publish the local modules
 # the bindings
 from .ext import libsift
@@ -19,6 +18,7 @@ from .Projection import Projection as projection
 
 # by convention
 __version__ = meta.version
+
 
 # administrative
 def copyright():
@@ -58,6 +58,5 @@ def version():
     """
     # pull and return the meta-data
     return meta.version
-
 
 # end of file

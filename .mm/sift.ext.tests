@@ -1,0 +1,15 @@
+# -*- makefile -*-
+#
+# the sift development team
+# (c) 2023-2024 all rights reserved
+
+
+# the testsuite for the sift bindings
+sift.ext.tests.stem := sift.ext
+# depends on
+sift.ext.tests.prerequisites := sift.ext
+# external dependencies
+sift.ext.tests.extern := $(sift.ext.extern)
+
+
+# end of file

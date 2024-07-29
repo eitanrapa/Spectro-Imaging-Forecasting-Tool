@@ -1,0 +1,19 @@
+# -*- makefile -*-
+#
+# the sift development team
+# (c) 2023-2024 all rights reserved
+
+
+# metadata for the sift python package
+# its name matches the name of the project, so it will get set correctly by default
+# its path relative to the project
+sift.pkg.root := pkg/sift/
+
+# its plexus wrapper is in {bin}
+sift.pkg.drivers := sift body
+
+# its configuration files are in {share}
+sift.pkg.defaults := share/
+
+
+# end of file

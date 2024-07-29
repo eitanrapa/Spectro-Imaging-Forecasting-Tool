@@ -15,7 +15,7 @@ HztoGHz = 1e-9  # Hertz to Gigahertz
 TCMB = 2.725  # Canonical CMB in Kelvin
 m = 9.109 * 10 ** (-31)  # Electron mass in kgs
 
-class SpectralSimulation:
+class Simulation:
     """
     This class defines the simulation suite. Initializing requires galaxy cluster parameters, instrument band
     definitions, and integration time for an observation.
@@ -33,49 +33,49 @@ class SpectralSimulation:
         self.data = None
         
     def differential_intensity_projection(band):
-    """
-    Plots the spectral distortions of the galaxy cluster along with the CIB background and the instrument bands
-    :param bands: Instrument band
-    :return: None
-    """
+        """
+        Plots the spectral distortions of the galaxy cluster along with the CIB background and the instrument bands
+        :param bands: Instrument band
+        :return: None
+        """
 
-    # Create an arbitrary frequency space
-    freq = np.linspace(start=80e9, stop=1000e9, num=2000)
+        # Create an arbitrary frequency space
+        freq = np.linspace(start=80e9, stop=1000e9, num=2000)
 
-    # Get the main SZ distortion
-    sz_template = functions.szpack_signal(frequency=freq, tau=functions.y_to_tau(y=self.y_value, temperature=self.electron_temperature), temperature=self.electron_temperature, peculiar_velocity=self.peculiar_velocity)
+        # Get the main SZ distortion
+        sz_template = functions.szpack_signal(frequency=freq, tau=functions.y_to_tau(y=self.y_value, temperature=self.electron_temperature), temperature=self.electron_temperature, peculiar_velocity=self.peculiar_velocity)
 
-    # Sample the CIB from SIDES
-    sides_template = functions.sides_average(freq=freq, a_sides=self.a_sides, b_sides=self.b_sides)
+        # Sample the CIB from SIDES
+        sides_template = functions.sides_average(freq=freq, a_sides=self.a_sides, b_sides=self.b_sides)
 
-    plt.rc('xtick', labelsize=18)
-    plt.rc('ytick', labelsize=18)
+        plt.rc('xtick', labelsize=18)
+        plt.rc('ytick', labelsize=18)
 
-    # Plot SZ components
-    plt.plot(freq * HztoGHz, abs(sz_template), '--k', label='Total SZ', linewidth=2)
-    plt.plot(freq * HztoGHz,
-             abs(functions.szpack_signal(frequency=freq, tau=functions.y_to_tau(y=self.y_value, temperature=self.electron_temperature), temperature=self.electron_temperature, peculiar_velocity=1e-11) - functions.classical_tsz(y=self.y_value, frequency=freq)), label='rSZ ' + str(self.electron_temperature) + ' keV')
-    plt.plot(freq * HztoGHz, abs(functions.classical_tsz(y=self.y_value, frequency=freq)), label='tSZ y=' + str(self.y_value))
+        # Plot SZ components
+        plt.plot(freq * HztoGHz, abs(sz_template), '--k', label='Total SZ', linewidth=2)
+        plt.plot(freq * HztoGHz,
+                 abs(functions.szpack_signal(frequency=freq, tau=functions.y_to_tau(y=self.y_value, temperature=self.electron_temperature), temperature=self.electron_temperature, peculiar_velocity=1e-11) - functions.classical_tsz(y=self.y_value, frequency=freq)), label='rSZ ' + str(self.electron_temperature) + ' keV')
+        plt.plot(freq * HztoGHz, abs(functions.classical_tsz(y=self.y_value, frequency=freq)), label='tSZ y=' + str(self.y_value))
 
-    # Plot the CIB
-    plt.plot(freq * HztoGHz, abs(sides_template), color='pink', label='CIB')
+        # Plot the CIB
+        plt.plot(freq * HztoGHz, abs(sides_template), color='pink', label='CIB')
 
-    # Plot the instrument bands
-    nu_total_array, sigma_b_array = band.get_sig_b(time=self.time)
+        # Plot the instrument bands
+        nu_total_array, sigma_b_array = band.get_sig_b(time=self.time)
 
-    plt.plot(nu_total_array * HztoGHz, sigma_b_array, 'o', lw=7, alpha=1, color='maroon')
+        plt.plot(nu_total_array * HztoGHz, sigma_b_array, 'o', lw=7, alpha=1, color='maroon')
 
-    plt.xscale('log')
-    plt.yscale('log')
-    plt.xlabel('GHz', fontsize=20)
-    plt.ylabel('W/m^2/Hz/Sr', fontsize=20)
+        plt.xscale('log')
+        plt.yscale('log')
+        plt.xlabel('GHz', fontsize=20)
+        plt.ylabel('W/m^2/Hz/Sr', fontsize=20)
 
-    # Make xticks to match as best as possible
-    plt.xticks(np.rint(np.logspace(np.log10(80), np.log10(1e3), num=9)))
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', frameon=True, prop={'size': 12}, ncol=1,
-               title='{} hour obs.'.format(time / 3600))
-    figure(figsize=(20, 20), dpi=80)
-    plt.show()
+        # Make xticks to match as best as possible
+        plt.xticks(np.rint(np.logspace(np.log10(80), np.log10(1e3), num=9)))
+        plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', frameon=True, prop={'size': 12}, ncol=1,
+                   title='{} hour obs.'.format(time / 3600))
+        figure(figsize=(20, 20), dpi=80)
+        plt.show()
 
     def model(self, theta, freq):
         """

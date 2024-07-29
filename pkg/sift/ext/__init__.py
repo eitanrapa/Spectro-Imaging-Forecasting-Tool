@@ -3,6 +3,8 @@
 # the sift development team
 # (c) 2023-2024 all rights reserved
 
+from .SZpack import SZpack as szPack
+
 # attempt to
 try:
     # pull the extension module

@@ -54,7 +54,6 @@
 #include <string>
 #include <fstream>
 #include <cmath>
-#include <vector>
 
 #include "physical_consts.h"
 #include "routines.h"
@@ -112,34 +111,6 @@ double compute_SZ_signal_5D(double xo,
     return Dtau*compute_SZ_distortion_Patterson_5D(xc, The, betac, mucc, eps_Int);
 }
 
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_5D(double *xo, int np, 
-                          double Dtau, double Te, 
-                          double betac, double muc, 
-                          double betao, double muo, 
-                          double eps_Int)
-{
-    for(int m=0; m<np; m++) 
-        xo[m]=compute_SZ_signal_5D(xo[m], Dtau, Te, betac, muc, betao, muo, eps_Int);
-    
-    return;
-}
-
-
-
-void compute_SZ_signal_5D(vector<double> &xo, 
-                          double Dtau, double Te, 
-                          double betac, double muc, 
-                          double betao, double muo, 
-                          double eps_Int)
-{
-    compute_SZ_signal_5D(&xo[0], xo.size(), Dtau, Te, betac, muc, betao, muo, eps_Int);
-    
-    return;
-}
-
 
 //==================================================================================================
 //
@@ -170,34 +141,6 @@ double compute_SZ_signal_3D(double xo,
     if(!CNSN2012_convention) Dtau*=gammac*(1.0-betac*mucc);
 
     return Dtau*compute_SZ_distortion_Patterson_3D(xc, The, betac, mucc, "all", eps_Int);
-}
-
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_3D(double *xo, int np, 
-                          double Dtau, double Te, 
-                          double betac, double muc, 
-                          double betao, double muo, 
-                          double eps_Int)
-{
-    for(int m=0; m<np; m++) 
-        xo[m]=compute_SZ_signal_3D(xo[m], Dtau, Te, betac, muc, betao, muo, eps_Int);
-    
-    return;
-}
-
-
-
-void compute_SZ_signal_3D(vector<double> &xo, 
-                          double Dtau, double Te, 
-                          double betac, double muc, 
-                          double betao, double muo, 
-                          double eps_Int)
-{
-    compute_SZ_signal_3D(&xo[0], xo.size(), Dtau, Te, betac, muc, betao, muo, eps_Int);
-    
-    return;
 }
 
 
@@ -249,38 +192,6 @@ double compute_SZ_signal_asymptotic(double xo,
     if(!CNSN2012_convention) Dtau*=gammac*(1.0-betac*mucc);
 
     return Dtau*compute_SZ_distortion_asymptotic(xc, The, betac, mucc, Te_order, betac_order,"all");
-}
-
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_asymptotic(double *xo, int np, 
-                                  double Dtau, double Te, 
-                                  double betac, double muc, 
-                                  double betao, double muo, 
-                                  int Te_order, int betac_order)
-{
-    for(int m=0; m<np; m++) 
-        xo[m]=compute_SZ_signal_asymptotic(xo[m], Dtau, Te, 
-                                           betac, muc, betao, muo, 
-                                           Te_order, betac_order);
-    
-    return;
-}
-
-
-
-void compute_SZ_signal_asymptotic(vector<double> &xo, 
-                                  double Dtau, double Te, 
-                                  double betac, double muc, 
-                                  double betao, double muo, 
-                                  int Te_order, int betac_order)
-{
-    compute_SZ_signal_asymptotic(&xo[0], xo.size(), Dtau, Te,                                           
-                                 betac, muc, betao, muo, 
-                                 Te_order, betac_order);
-    
-    return;
 }
 
 
@@ -342,39 +253,6 @@ double compute_SZ_signal_CNSN_basis(double xo,
     return Dtau*compute_SZ_distortion_CNSN_basis(xc, The, betac, mucc, Te_order, betac_order,"all");
 }
 
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_CNSN_basis(double *xo, int np, 
-                                  double Dtau, double Te, 
-                                  double betac, double muc, 
-                                  double betao, double muo, 
-                                  int Te_order, int betac_order)
-{
-    for(int m=0; m<np; m++) 
-        xo[m]=compute_SZ_signal_CNSN_basis(xo[m], Dtau, Te, 
-                                           betac, muc, betao, muo, 
-                                           Te_order, betac_order);
-    
-    return;
-}
-
-
-
-void compute_SZ_signal_CNSN_basis(vector<double> &xo, 
-                                  double Dtau, double Te, 
-                                  double betac, double muc, 
-                                  double betao, double muo, 
-                                  int Te_order, int betac_order)
-{
-    compute_SZ_signal_CNSN_basis(&xo[0], xo.size(), Dtau, Te,                                           
-                                 betac, muc, betao, muo, 
-                                 Te_order, betac_order);
-    
-    return;
-}
-
-
 //==================================================================================================
 //
 // Similar to compute_SZ_signal_CNSN_basis-function defined above but here kmax and accuracy_level
@@ -419,40 +297,6 @@ double compute_SZ_signal_CNSN_basis_opt(double xo,
                                                      betac_order, "all", accuracy_level);
 }
 
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_CNSN_basis_opt(double *xo, int np,
-                                      double Dtau, double Te,
-                                      double betac, double muc,
-                                      double betao, double muo,
-                                      int kmax, int betac_order,
-                                      int accuracy_level)
-{
-    for(int m=0; m<np; m++)
-        xo[m]=compute_SZ_signal_CNSN_basis_opt(xo[m], Dtau, Te,
-                                               betac, muc, betao, muo,
-                                               kmax, betac_order, accuracy_level);
-    
-    return;
-}
-
-
-
-void compute_SZ_signal_CNSN_basis_opt(vector<double> &xo,
-                                      double Dtau, double Te,
-                                      double betac, double muc,
-                                      double betao, double muo,
-                                      int kmax, int betac_order,
-                                      int accuracy_level)
-{
-    compute_SZ_signal_CNSN_basis_opt(&xo[0], xo.size(), Dtau, Te,
-                                     betac, muc, betao, muo,
-                                     kmax, betac_order, accuracy_level);
-    
-    return;
-}
-
 
 //==================================================================================================
 // 
@@ -469,33 +313,6 @@ double compute_SZ_signal_combo(double xo,
     if(Te<2.0) return compute_SZ_signal_asymptotic(xo, Dtau, Te, betac, muc, betao, muo, 10, 2); 
     return compute_SZ_signal_CNSN_basis(xo, Dtau, Te, betac, muc, betao, muo, 20, 2); 
 }
-
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_combo(double *xo, int np, 
-                             double Dtau, double Te, 
-                             double betac, double muc, 
-                             double betao, double muo)
-{
-    for(int m=0; m<np; m++) 
-        xo[m]=compute_SZ_signal_combo(xo[m], Dtau, Te, betac, muc, betao, muo);
-
-    return;
-}
-    
-
-
-void compute_SZ_signal_combo(vector<double> &xo, 
-                             double Dtau, double Te, 
-                             double betac, double muc, 
-                             double betao, double muo)
-{
-    compute_SZ_signal_combo(&xo[0], xo.size(), Dtau, Te, betac, muc, betao, muo);
-
-    return;
-}
-
 
 //==================================================================================================
 // Derivatives (The^k d^k_dThe /k!) (d^m_dbetapara /m!) (d^l_beta2perp /l!) S(...)
@@ -542,7 +359,7 @@ void Dcompute_SZ_signal_combo_CMB(double x, int k, int m, int l,
 // precision similar to 0.001%, assuming smooth cluster profile. (added 6th Aug, 2012, JC)
 //
 //==================================================================================================
-double compute_SZ_signal_combo_means(double xo, 
+double sift::compute_SZ_signal_combo_means(double xo,
                                      // mean parameters
                                      double tau, double TeSZ, double betac_para,
                                      // variances
@@ -570,53 +387,21 @@ double compute_SZ_signal_combo_means(double xo,
     return r;
 }
 
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_combo_means(double *xo, int np, 
-                                   // mean parameters
-                                   double tau, double TeSZ, double betac_para,
-                                   // variances
-                                   double omega, double sigma, 
-                                   double kappa, double betac2_perp)
-{
-    for(int m=0; m<np; m++) 
-        xo[m]=compute_SZ_signal_combo_means(xo[m], tau, TeSZ, betac_para, 
-                                            omega, sigma, kappa, betac2_perp);
-    
-    return;
-}
-
-
-void compute_SZ_signal_combo_means(vector<double> &xo, 
-                                   // mean parameters
-                                   double tau, double TeSZ, double betac_para,
-                                   // variances
-                                   double omega, double sigma, 
-                                   double kappa, double betac2_perp)
-{
-    compute_SZ_signal_combo_means(&xo[0], xo.size(), tau, TeSZ, betac_para, 
-                                  omega, sigma, kappa, betac2_perp);
-    
-    return;
-}
-
-
 //==================================================================================================
-// 
-// Compute null of SZ signal using expansion around mean values of tau, TeSZ, and betac*muc. This  
-// routine should reproduce the full numerical result for Te < 75keV, and beta < 0.01 with high 
+//
+// Compute null of SZ signal using expansion around mean values of tau, TeSZ, and betac*muc. This
+// routine should reproduce the full numerical result for Te < 75keV, and beta < 0.01 with high
 // precision, assuming smooth cluster profile. (added 8th Aug, 2012, JC)
 //
 //==================================================================================================
 double func_SZ_null(double *x, void *p)
 {
     double *d=(double *)p;
-    return compute_SZ_signal_combo_means(*x, d[0], d[1], d[2], d[3], d[4], d[5], d[6]);
+    return sift::compute_SZ_signal_combo_means(*x, d[0], d[1], d[2], d[3], d[4], d[5], d[6]);
 }
 
 double compute_null_of_SZ_signal(double tau, double TeSZ, double betac_para,
-                                 double omega, double sigma, 
+                                 double omega, double sigma,
                                  double kappa, double betac2_perp)
 {
     double d[]={tau, TeSZ, betac_para, omega, sigma, kappa, betac2_perp};
@@ -628,77 +413,46 @@ double compute_null_of_SZ_signal(double tau, double TeSZ, double betac_para,
 //==================================================================================================
 //
 // Extended versions of expansions around average values. Up to The^4 terms can be included for
-// the thSZ signal and up to The^3 for first order cross terms (temperature corrections to higher 
-// order velocity terms can in principle be activated but have been omitted at this point). 
+// the thSZ signal and up to The^3 for first order cross terms (temperature corrections to higher
+// order velocity terms can in principle be activated but have been omitted at this point).
 // The parameters are:
-// 
+//
 // omega[0..2] == omega^(1..3)         [i.e., O(The), O(The^2), O(The^3) & O(The^4)]
 // sigma[0..2] == sigma^(1..3, 1)      [i.e., O(betac The), O(betac The^2), O(betac The^3)]
 // kappa       == kappa^(1)            [i.e., O(betac^2 muc^2)]
-// betac2_perp == <beta_c^2 (1-muc^2)> 
+// betac2_perp == <beta_c^2 (1-muc^2)>
 //
 // according to definitions of CSNN 2012. Values that are not need should be set to zero.
 // (added 29th Aug, 2012, JC)
 //
 //==================================================================================================
-double compute_SZ_signal_combo_means_ex(double xo, 
+double compute_SZ_signal_combo_means_ex(double xo,
                                         // mean parameters
                                         double tau, double TeSZ, double betac_para,
                                         // variances
-                                        double omega[3], double sigma[3], 
+                                        double omega[3], double sigma[3],
                                         double kappa, double betac2_perp)
 {
     vector<double> dDn_dThe;
-    
+
     // mean signal + temperature dispersion term
     Dcompute_SZ_signal_combo_CMB(xo, 4, 0, 0, tau, TeSZ, betac_para, 1.0, dDn_dThe);
     double r=dDn_dThe[0]+dDn_dThe[2]*omega[0]+dDn_dThe[3]*omega[1]+dDn_dThe[4]*omega[2];
-    
+
     // velocity - temperature cross term
     Dcompute_SZ_signal_combo_CMB(xo, 3, 1, 0, tau, TeSZ, betac_para, 1.0, dDn_dThe);
     r+=dDn_dThe[1]*sigma[0]+dDn_dThe[2]*sigma[1]+dDn_dThe[3]*sigma[2];
-    
+
     // betac_parallel dispersion term
     Dcompute_SZ_signal_combo_CMB(xo, 0, 2, 0, tau, TeSZ, betac_para, 1.0, dDn_dThe);
     r+=dDn_dThe[0]*kappa;
-    
+
     // betac_perp dispersion term
     Dcompute_SZ_signal_combo_CMB(xo, 0, 0, 1, tau, TeSZ, betac_para, 1.0, dDn_dThe);
     r+=dDn_dThe[0]*betac2_perp;
-    
-    return r;    
+
+    return r;
 }
-
-//--------------------------------------------------------------------------------------------------
-// vector versions (output is returned in xo-vector)
-//--------------------------------------------------------------------------------------------------
-void compute_SZ_signal_combo_means_ex(double *xo, int np, 
-                                      // mean parameters
-                                      double tau, double TeSZ, double betac_para,
-                                      // variances
-                                      double omega[3], double sigma[3], 
-                                      double kappa, double betac2_perp)
-{
-    for(int m=0; m<np; m++) 
-        xo[m]=compute_SZ_signal_combo_means_ex(xo[m], tau, TeSZ, betac_para, 
-                                               omega, sigma, kappa, betac2_perp);
-    
-    return;
-}
-
-void compute_SZ_signal_combo_means_ex(vector<double> &xo, 
-                                      // mean parameters
-                                      double tau, double TeSZ, double betac_para,
-                                      // variances
-                                      double omega[3], double sigma[3], 
-                                      double kappa, double betac2_perp)
-{
-    compute_SZ_signal_combo_means_ex(&xo[0], xo.size(), tau, TeSZ, betac_para, 
-                                     omega, sigma, kappa, betac2_perp);
-    
-    return;
-}    
-
 
 //==================================================================================================
 //==================================================================================================

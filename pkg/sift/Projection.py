@@ -1,15 +1,14 @@
-from .Simulation import Simulation
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import figure
 import corner
 import pygtc
 import numpy as np
 import pickle
 
+
 class Projection:
     """
     """
-    
+
     def __init__(self, file_path):
         self.file_path = file_path
 
@@ -45,8 +44,7 @@ class Projection:
 
         return fig, data
 
-
-    def contour_plot_double_projection(file_name1, file_name2):
+    def contour_plot_double_projection(self, file_name1, file_name2):
         """
         Plot using pygtc a comparison between two runs.
         :param file_name1: name of file containing first run
@@ -76,13 +74,13 @@ class Projection:
         theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides, cmb_anis)
 
         # Plot contour plot
-        GTC = pygtc.plotGTC(chains=[data1, data2], chainLabels=chainLabels, truths=theta, paramNames=labels, figureSize=10)
+        GTC = pygtc.plotGTC(chains=[data1, data2], chainLabels=chainLabels, truths=theta, paramNames=labels,
+                            figureSize=10)
         plt.show()
 
         return GTC, data1, data2
 
-
-    def chain_projection(file_name):
+    def chain_projection(self, file_name):
         """
         Plots the MCMC chains of a run.
         :param file_name: name of file containing run

@@ -7,11 +7,6 @@
 
 import sift
 
-import sys
-
-sys.path.append("/home/bolocam/erapaport/SIFT_old/codes/SZpack.v1.1.1/python")
-import SZpack as SZ
-
 
 class SZpack:
     """
@@ -27,17 +22,17 @@ class SZpack:
         self.kappa = kappa
         self.betac2_perp = betac2_perp
 
-    def sz_combo_means(self, xo):
+    def sz_combo_means(self, x):
         """
 
         """
 
-        # output = sift.ext.sift.szpack_combo_means(xo=xo, tau=self.tau, TeSZ=self.TeSZ, betac_para=self.betac_para,
-        #                                           omega=self.omega, sigma=self.sigma, kappa=self.kappa,
-        #                                           betac2_perp=self.betac2_perp)
-
-        output = SZ.compute_combo_means(xo, self.tau, self.TeSZ, self.betac_para, self.omega, self.sigma, self.kappa,
-                                        self.betac2_perp)
+        output = []
+        for xo in x:
+            output.append(sift.libsift.szpack_combo_means(xo=xo, tau=self.tau, TeSZ=self.TeSZ,
+                                                          betac_para=self.betac_para,
+                                                          omega=self.omega, sigma=self.sigma, kappa=self.kappa,
+                                                          betac2_perp=self.betac2_perp))
 
         return output
 

@@ -1,5 +1,5 @@
 import numpy as np
-import Mather_photonNEP12a as NEP
+from .Mather_photonNEP12a import photonNEPdifflim
 
 # Constants
 c = 299792458.0  # Speed of light - [c] = m/s
@@ -77,8 +77,8 @@ class Hybrid:
         nu_res = self.bands['nu_resGHz'] * GHztoHz
         Npx = self.bands['N_pixels']
 
-        NEP_phot1 = NEP.photonNEPdifflim(nu_min=nu_min, nu_max=nu_max, Tsys=tnoise)  # This is CMB Tnoise
-        NEP_phot2 = NEP.photonNEPdifflim(nu_min=nu_min, nu_max=nu_max, Tsys=10.0, aef=0.01)  # Use real South Pole data
+        NEP_phot1 = photonNEPdifflim(nu_min=nu_min, nu_max=nu_max, Tsys=tnoise)  # This is CMB Tnoise
+        NEP_phot2 = photonNEPdifflim(nu_min=nu_min, nu_max=nu_max, Tsys=10.0, aef=0.01)  # Use real South Pole data
         NEP_det = 10e-18  # ATTO WATTS per square-root(hz)
         NEP_tot = np.sqrt(NEP_phot1 ** 2 + NEP_phot2 ** 2 + NEP_det ** 2)  # Don't include atmosphere for now
 

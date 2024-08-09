@@ -1,5 +1,3 @@
-#from numba import jit
-# if this gets slow think of using numba
 import numpy as np
 import scipy.constants as cons
 from scipy import integrate

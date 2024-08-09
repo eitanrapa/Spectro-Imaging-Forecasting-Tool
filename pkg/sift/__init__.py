@@ -15,6 +15,7 @@ from . import meta
 from .Simulation import Simulation as simulation
 from .Parameters import Parameters as parameters
 from .Projection import Projection as projection
+from . import bands
 
 # by convention
 __version__ = meta.version

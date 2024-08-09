@@ -14,7 +14,7 @@ sift.ext.wraps := sift.lib
 # built with pybind11
 sift.ext.capsule :=
 # dependencies on external packages
-sift.ext.extern := sift.lib pybind11 python
+sift.ext.extern := sift.lib pybind11 python gsl
 # compiler control
 sift.ext.lib.c++.flags += $($(compiler.c++).std.c++20)
 

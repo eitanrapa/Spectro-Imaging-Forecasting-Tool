@@ -9,7 +9,7 @@ sift.lib.stem := sift
 # its location
 sift.lib.root := lib/sift/
 # dependencies on external packages
-sift.lib.extern :=
+sift.lib.extern := gsl
 
 # use c++20
 sift.lib.c++.flags += $($(compiler.c++).std.c++20)

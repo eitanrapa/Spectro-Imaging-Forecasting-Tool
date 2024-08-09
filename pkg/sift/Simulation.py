@@ -7,6 +7,7 @@ import sift
 from astropy.io import fits
 import pandas as pd
 from scipy.interpolate import interp1d
+import git
 
 # Constants
 c = 299792458.0  # Speed of light - [c] = m/s
@@ -73,7 +74,8 @@ def sides_continuum(freq, long, lat):
     """
 
     # Read FITS file
-    fname = '/bolocam/bolocam/erapaport/Auxiliary/continuum.fits'
+    repo = git.Repo('.', search_parent_directories=True)
+    fname = repo.working_tree_dir + '/files/continuum.fits'
     hdu = fits.open(name=fname)
     image_data = hdu[0].data
 
@@ -87,7 +89,7 @@ def sides_continuum(freq, long, lat):
     total_SIDES = total_SIDES / 36
 
     # Interpolate for specific frequencies
-    sides_template = interpolate(freq=freq, datax=np.linspace(0, 1500e9, 751), datay=total_SIDES)
+    sides_template = interpolate(freq=freq, datax=np.linspace(2e9, 1500e9, 750), datay=total_SIDES)
     return sides_template
 
 
@@ -100,13 +102,14 @@ def sides_average(freq, a_sides, b_sides):
     """
 
     # Read SIDES average model
-    df = pd.read_csv(filepath_or_buffer='/bolocam/bolocam/erapaport/Auxiliary/sides.csv', header=None)
+    repo = git.Repo('.', search_parent_directories=True)
+    df = pd.read_csv(filepath_or_buffer=repo.working_tree_dir + '/files/sides.csv', header=None)
     data = df.to_numpy()
     data = data.squeeze()
     SIDES = data * MJyperSrtoSI
 
     # Modify template by a_sides, b_sides
-    sides_template = a_sides * interpolate(freq=freq, datax=np.linspace(0, 1500e9, 751) * b_sides, datay=SIDES)
+    sides_template = a_sides * interpolate(freq=freq, datax=np.linspace(2e9, 1500e9, 750) * b_sides, datay=SIDES)
     return sides_template
 
 
@@ -167,10 +170,9 @@ class Simulation:
         self.cmb_anis = 0
         self.data = None
 
-    def differential_intensity_projection(self, band):
+    def differential_intensity_projection(self):
         """
         Plots the spectral distortions of the galaxy cluster along with the CIB background and the instrument bands
-        :param band: Instrument band
         :return: None
         """
 
@@ -207,7 +209,7 @@ class Simulation:
         plt.plot(freq * HztoGHz, abs(sides_template), color='pink', label='CIB')
 
         # Plot the instrument bands
-        nu_total_array, sigma_b_array = band.get_sig_b(time=self.time)
+        nu_total_array, sigma_b_array = self.bands.get_sig_b(time=self.time)
 
         plt.plot(nu_total_array * HztoGHz, sigma_b_array, 'o', lw=7, alpha=1, color='maroon')
 

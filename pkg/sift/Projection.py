@@ -22,18 +22,24 @@ class Projection:
         # Read simulation output
         data = np.load(file=self.file_path + file_name, allow_pickle=True)
 
-        # Read object
-        with open(file=self.file_path + file_name[:-4] + '_object', mode='rb') as f:
-            sift_object = pickle.load(file=f)
+        # # Read object
+        # with open(file=self.file_path + file_name[:-4] + '_object', mode='rb') as f:
+        #     sift_object = pickle.load(file=f)
 
         # Create labels for contour plot
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
-        y_value = sift_object.y_value
-        electron_temperature = sift_object.electron_temperature
-        peculiar_velocity = sift_object.peculiar_velocity
-        a_sides = sift_object.a_sides
-        b_sides = sift_object.b_sides
-        cmb_anis = sift_object.cmb_anis
+        # y_value = sift_object.y_value
+        # electron_temperature = sift_object.electron_temperature
+        # peculiar_velocity = sift_object.peculiar_velocity
+        # a_sides = sift_object.a_sides
+        # b_sides = sift_object.b_sides
+        # cmb_anis = sift_object.cmb_anis
+        y_value = 5.4e-5
+        electron_temperature = 5
+        peculiar_velocity = 0
+        a_sides = 1
+        b_sides = 1
+        cmb_anis = 0
         theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides, cmb_anis)
 
         # Plot contour plot

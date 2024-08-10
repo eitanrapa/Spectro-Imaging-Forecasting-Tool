@@ -17,4 +17,7 @@
 # python cache
 **__pycache__
 
+# pycharm
+/.idea
+
 # end of file

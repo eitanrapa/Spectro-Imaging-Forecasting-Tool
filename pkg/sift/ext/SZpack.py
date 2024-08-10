@@ -4,7 +4,7 @@
 #
 # the sift development team
 # (c) 2023-2024 all rights reserved
-
+import numpy as np
 import sift
 
 
@@ -34,6 +34,6 @@ class SZpack:
                                                           omega=self.omega, sigma=self.sigma, kappa=self.kappa,
                                                           betac2_perp=self.betac2_perp))
 
-        return output
+        return np.asanyarray(output)
 
 # end of file

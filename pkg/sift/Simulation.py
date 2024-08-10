@@ -44,10 +44,9 @@ def szpack_signal(frequency, tau, temperature, peculiar_velocity):
     :return: Spectral brightness distribution
     """
 
-    x_b = (h_p / (k_b * TCMB)) * frequency
     original_x_b = (h_p / (k_b * TCMB)) * frequency
     sz = sift.ext.szPack(tau=tau, temperature=temperature, peculiar_velocity=peculiar_velocity / 3e5)
-    sz.sz_combo_means(x_b)
+    x_b = sz.sz_combo_means(original_x_b)
     return x_b * 13.33914078 * (TCMB ** 3) * (original_x_b ** 3) * MJyperSrtoSI
 
 
@@ -89,7 +88,7 @@ def sides_continuum(freq, long, lat):
     total_SIDES = total_SIDES / 36
 
     # Interpolate for specific frequencies
-    sides_template = interpolate(freq=freq, datax=np.linspace(2e9, 1500e9, 750), datay=total_SIDES)
+    sides_template = interpolate(freq=freq, datax=np.linspace(2e9, 1500e9, 750), datay=total_SIDES[1:])
     return sides_template
 
 
@@ -109,7 +108,8 @@ def sides_average(freq, a_sides, b_sides):
     SIDES = data * MJyperSrtoSI
 
     # Modify template by a_sides, b_sides
-    sides_template = a_sides * interpolate(freq=freq, datax=np.linspace(2e9, 1500e9, 750) * b_sides, datay=SIDES)
+    sides_template = a_sides * interpolate(freq=freq, datax=np.linspace(2e9, 1500e9, 750) * b_sides,
+                                           datay=SIDES[1:])
     return sides_template
 
 
@@ -367,7 +367,7 @@ class Simulation:
 
         return sampler
 
-    def run_sim(self, file_path, parameter_file, chain_length=12000, walkers=100, realizations=100, discard_n=2000,
+    def run_sim(self, parameter_file, chain_length=12000, walkers=100, realizations=100, discard_n=2000,
                 thin_n=200, processors_pool=30):
         """
         Function used to analyze parameters and chains after calling MCMC.
@@ -383,7 +383,7 @@ class Simulation:
         """
 
         # Read saved parameters file
-        params = np.load(file=file_path + parameter_file, allow_pickle=True)
+        params = np.load(file=parameter_file, allow_pickle=True)
 
         samples = [[0, 0, 0, 0, 0, 0]]
         samples = np.asarray(samples)

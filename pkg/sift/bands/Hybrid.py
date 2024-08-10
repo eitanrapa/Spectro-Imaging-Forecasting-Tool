@@ -62,7 +62,7 @@ class Hybrid:
 
     #         return nu_vec, sigma_B
 
-    def sig_b(self, time, tnoise=3.0):
+    def sig_b(self, band, time, tnoise=3.0):
         """
         Noise Equivalent Brightness function with unknown NEPs.
         Use for apples to apples with OLIMPO photometric mode.
@@ -70,12 +70,12 @@ class Hybrid:
         :param tnoise: Thermal noise of CMB
         """
 
-        BW_GHz = self.bands['nu_meanGHz'] * self.bands['FBW']
+        BW_GHz = band['nu_meanGHz'] * band['FBW']
 
-        nu_min = (self.bands['nu_meanGHz'] - 0.5 * BW_GHz) * GHztoHz
-        nu_max = (self.bands['nu_meanGHz'] + 0.5 * BW_GHz) * GHztoHz
-        nu_res = self.bands['nu_resGHz'] * GHztoHz
-        Npx = self.bands['N_pixels']
+        nu_min = (band['nu_meanGHz'] - 0.5 * BW_GHz) * GHztoHz
+        nu_max = (band['nu_meanGHz'] + 0.5 * BW_GHz) * GHztoHz
+        nu_res = band['nu_resGHz'] * GHztoHz
+        Npx = band['N_pixels']
 
         NEP_phot1 = photonNEPdifflim(nu_min=nu_min, nu_max=nu_max, Tsys=tnoise)  # This is CMB Tnoise
         NEP_phot2 = photonNEPdifflim(nu_min=nu_min, nu_max=nu_max, Tsys=10.0, aef=0.01)  # Use real South Pole data
@@ -83,7 +83,7 @@ class Hybrid:
         NEP_tot = np.sqrt(NEP_phot1 ** 2 + NEP_phot2 ** 2 + NEP_det ** 2)  # Don't include atmosphere for now
 
         # in making nu_vec we must be aware of resolution
-        Nse = int(np.round(BW_GHz / self.bands['nu_resGHz']))
+        Nse = int(np.round(BW_GHz / band['nu_resGHz']))
         nu_vec = np.linspace(start=nu_min, stop=nu_max, num=Nse)
         AOnu = (c / nu_vec) ** 2
 
@@ -112,7 +112,7 @@ class Hybrid:
                 sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b), axis=None)
 
             if band['type'] == 'spectrometric':
-                nu_vec_b, sigma_B_b = self.sig_b(time=time)
+                nu_vec_b, sigma_B_b = self.sig_b(time=time, band=band)
                 nu_total_array = np.concatenate((nu_total_array, nu_vec_b), axis=None)
                 sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b), axis=None)
 

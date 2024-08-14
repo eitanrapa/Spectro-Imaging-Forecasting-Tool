@@ -2,8 +2,9 @@ import matplotlib.pyplot as plt
 import corner
 import pygtc
 import numpy as np
-import pickle
 from scipy.stats import median_abs_deviation
+import h5py
+
 
 class Projection:
     """
@@ -20,20 +21,18 @@ class Projection:
         """
 
         # Read simulation output
-        data = np.load(file=self.file_path + file_name, allow_pickle=True)
+        f = h5py.File(name=self.file_path + file_name, mode='r')
 
-        # Read object
-        with open(file=self.file_path + file_name[:-4] + '_object', mode='rb') as f:
-            sift_object = pickle.load(file=f)
+        data = f["chains"]
 
         # Create labels for contour plot
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
-        y_value = sift_object.y_value
-        electron_temperature = sift_object.electron_temperature
-        peculiar_velocity = sift_object.peculiar_velocity
-        a_sides = sift_object.a_sides
-        b_sides = sift_object.b_sides
-        cmb_anis = sift_object.cmb_anis
+        y_value = f.attrs["y"]
+        electron_temperature = f.attrs["electron_temperature"]
+        peculiar_velocity = f.attrs["peculiar_velocity"]
+        a_sides = f.attrs["a_sides"]
+        b_sides = f.attrs["b_sides"]
+        cmb_anis = f.attrs["cmb_anis"]
         theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides, cmb_anis)
 
         # Plot contour plot
@@ -52,33 +51,32 @@ class Projection:
         :return: figure, data 1 and data2
         """
 
-        # Read simulation outputs
-        data1 = np.load(self.file_path + file_name1, allow_pickle=True)
-        data2 = np.load(self.file_path + file_name2, allow_pickle=True)
+        # Read simulation output
+        f1 = h5py.File(name=self.file_path + file_name1, mode='r')
 
-        # Read first object
-        with open(file=self.file_path + file_name1[:-4] + '_object', mode='rb') as f:
-            sift_object = pickle.load(file=f)
+        f2 = h5py.File(name=self.file_path + file_name2, mode='r')
 
-        # Create labels for contour plot
-        y_value = sift_object.y_value
-        electron_temperature = sift_object.electron_temperature
-        peculiar_velocity = sift_object.peculiar_velocity
-        a_sides = sift_object.a_sides
-        b_sides = sift_object.b_sides
-        cmb_anis = sift_object.cmb_anis
+        data1 = f1["chains"]
+        data2 = f2["chains"]
 
-        chainLabels = ["Run {}".format(str(file_name1)), "Run {}".format(str(file_name2))]
+        y_value = f1.attrs["y"]
+        electron_temperature = f1.attrs["electron_temperature"]
+        peculiar_velocity = f1.attrs["peculiar_velocity"]
+        a_sides = f1.attrs["a_sides"]
+        b_sides = f1.attrs["b_sides"]
+        cmb_anis = f1.attrs["cmb_anis"]
+
+        chain_labels = ["Run {}".format(str(file_name1)), "Run {}".format(str(file_name2))]
 
         labels = ('y', 'temperature', 'peculiar_vel', 'a_sides', 'b_sides', 'CMB')
         theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides, cmb_anis)
 
         # Plot contour plot
-        GTC = pygtc.plotGTC(chains=[data1, data2], chainLabels=chainLabels, truths=theta, paramNames=labels,
+        gtc = pygtc.plotGTC(chains=[data1, data2], chainLabels=chain_labels, truths=theta, paramNames=labels,
                             figureSize=10)
         plt.show()
 
-        return GTC, data1, data2
+        return gtc, data1, data2
 
     def chain_projection(self, file_name):
         """
@@ -87,8 +85,10 @@ class Projection:
         :return: figure and axes
         """
 
-        # Read simulation output, change directory
-        data = np.load(self.file_path + file_name, allow_pickle=True)
+        # Read simulation output
+        f = h5py.File(name=self.file_path + file_name, mode='r')
+
+        data = f["chains"]
 
         # Create labels for contour plot    # Create labels for contour plot
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
@@ -106,12 +106,23 @@ class Projection:
         return fig, axes
 
     def statistics(self, file_name):
+        """
+
+        """
 
         # Read simulation output
-        data = np.load(file=self.file_path + file_name, allow_pickle=True)
+        f = h5py.File(name=self.file_path + file_name, mode='r')
 
-        print("Mean of y_value = " + np.mean(data[:, 0]))
-        print("Median of y_value = " + median_abs_deviation(data[:, 0]))
+        data = f["chains"]
 
-        print("Median of peculiar velocity = " + median_abs_deviation(data[:, 2]))
-        print("Median of peculiar velocity = " + median_abs_deviation(data[:, 2]))
+        y_mean = np.mean(data[:, 0])
+        y_std = median_abs_deviation(data[:, 0])
+        print("Mean of y_value = " + str(y_mean))
+        print("Median of y_value = " + str(y_std))
+
+        pec_vel_mean = median_abs_deviation(data[:, 2])
+        pec_vel_std = median_abs_deviation(data[:, 2])
+        print("Median of peculiar velocity = " + str(pec_vel_mean))
+        print("Median of peculiar velocity = " + str(pec_vel_std))
+
+        return y_mean, y_std,

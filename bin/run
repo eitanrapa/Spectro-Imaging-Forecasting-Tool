@@ -1,0 +1,75 @@
+#!/usr/bin/env python3
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# (c) 2023-2024 all rights reserved
+
+
+# get the package
+import sift
+import json
+import git
+
+
+class Run(sift.application):
+    """
+    Print simple information about a planetary run
+    """
+
+    def main(self, *args, **kwargs):
+        """
+        Main entry point
+        """
+
+        run_file = sift.properties.str()
+        run_file.doc = "run file name"
+
+        band_file = sift.properties.str()
+        run_file.doc = "band file name"
+
+        repo = git.Repo('.', search_parent_directories=True)
+
+        # Get run parameters
+        with open(repo.working_tree_dir + '/files/' + run_file, 'r') as file:
+            params = json.load(file)
+        y = params.get('y')
+        electron_temperature = params.get('electron_temperature')
+        peculiar_vel = params.get('peculiar_velocity')
+        time = params.get('time')
+        realizations = params.get('realizations')
+        processors = params.get('processors')
+        chain_length = params.get('chain_length')
+        walkers = params.get('walkers')
+        discard_n = params.get('discard_n')
+        thin_n = params.get('thin_n')
+        angular_resolution = params.get('angular_resolution')
+        run_name = params.get('run_name')
+        save_path = params.get('run_path')
+
+        # Get band parameters
+        with open(repo.working_tree_dir + '/files/' + band_file, 'r') as file:
+            loaded_band = json.load(file)
+
+        band = sift.band(loaded_band)
+        siftsim = sift.simulation(y=y, electron_temperature=electron_temperature, peculiar_velocity=peculiar_vel,
+                                  band=band, time=time, angular_resolution=angular_resolution)
+
+        siftsim.run_sim(chain_length=chain_length, discard_n=discard_n, walkers=walkers, processors=processors,
+                        realizations=realizations, thin_n=thin_n)
+
+        siftsim.save(file_path=save_path, file_name=run_name)
+        # all done
+        return 0
+
+
+# bootstrap
+if __name__ == "__main__":
+    # instantiate the application
+    app = Run(name="run")
+    # invoke it
+    status = app.run()
+    # share its status with the shell
+    raise SystemExit(status)
+
+# end of file

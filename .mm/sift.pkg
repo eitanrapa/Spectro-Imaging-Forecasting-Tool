@@ -10,7 +10,7 @@
 sift.pkg.root := pkg/sift/
 
 # its plexus wrapper is in {bin}
-sift.pkg.drivers := sift body
+sift.pkg.drivers := sift dip run
 
 # its configuration files are in {share}
 sift.pkg.defaults := share/

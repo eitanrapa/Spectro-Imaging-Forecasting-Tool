@@ -1,5 +1,4 @@
 import numpy as np
-import pickle
 import emcee
 import matplotlib.pyplot as plt
 from multiprocessing import Pool
@@ -8,6 +7,8 @@ from astropy.io import fits
 import pandas as pd
 from scipy.interpolate import interp1d
 import git
+import os
+import h5py
 
 # Constants
 c = 299792458.0  # Speed of light - [c] = m/s
@@ -63,12 +64,13 @@ def classical_tsz(y, frequency):
     return y * ((x_b * np.exp(x_b)) / (np.exp(x_b) - 1)) * (x_b * ((np.exp(x_b) + 1) / (np.exp(x_b) - 1)) - 4) * bv
 
 
-def sides_continuum(freq, long, lat):
+def sides_continuum(freq, long, lat, angular_resolution=3.0):
     """
     Get the spectrum of the CIB using the SIDES catalog.
     :param freq: Frequency space
     :param long: Longitudinal coordinates of SIDES
     :param lat: Longitudes coordinates of SIDES
+    :param angular_resolution: angular resolution for rebinning
     :return: Spectral brightness distortion
     """
 
@@ -81,9 +83,9 @@ def sides_continuum(freq, long, lat):
     # SIDES spans 0 to 1500 GHz with 2 GHz intervals, with 0.5 arcmin resolution
     total_SIDES = np.zeros(shape=751)
 
-    # Rebinning for 3 arcmin
-    for col in range(6):
-        for row in range(6):
+    # Rebinning given 0.5 angular resolution
+    for col in range(int(2*angular_resolution)):
+        for row in range(int(2*angular_resolution)):
             total_SIDES += image_data[:, long + row, lat + col] * MJyperSrtoSI
     total_SIDES = total_SIDES / 36
 
@@ -159,7 +161,8 @@ class Simulation:
     definitions, and integration time for an observation.
     """
 
-    def __init__(self, y_value, electron_temperature, peculiar_velocity, bands, time, a_sides=1, b_sides=1):
+    def __init__(self, y_value, electron_temperature, peculiar_velocity, bands, time, angular_resolution=3.0,
+                 a_sides=1, b_sides=1):
         self.y_value = y_value
         self.electron_temperature = electron_temperature
         self.peculiar_velocity = peculiar_velocity
@@ -168,6 +171,7 @@ class Simulation:
         self.a_sides = a_sides
         self.b_sides = b_sides
         self.cmb_anis = 0
+        self.angular_resolution = angular_resolution
         self.data = None
 
     def differential_intensity_projection(self):
@@ -331,7 +335,8 @@ class Simulation:
         nu_total_array, sigma_b_array = self.bands.get_sig_b(time=self.time)
 
         # SIDES
-        sides_template = sides_continuum(freq=nu_total_array, long=long, lat=lat)
+        sides_template = sides_continuum(freq=nu_total_array, long=long, lat=lat,
+                                         angular_resolution=self.angular_resolution)
 
         # SZ
         sz_template = szpack_signal(frequency=nu_total_array,
@@ -367,12 +372,10 @@ class Simulation:
 
         return sampler
 
-    def run_sim(self, parameter_file, chain_length=12000, walkers=100, realizations=100, discard_n=2000,
+    def run_sim(self, chain_length=12000, walkers=100, realizations=100, discard_n=2000,
                 thin_n=200, processors_pool=30):
         """
         Function used to analyze parameters and chains after calling MCMC.
-        :param file_path: Where to save run
-        :param parameter_file: File containing parameters for run
         :param walkers: Number of walkers used for MCMC
         :param processors_pool: Number of processors to use for MCMC, multiprocessing
         :param chain_length: Amount of samples to take for each chain
@@ -382,8 +385,17 @@ class Simulation:
         :return None, saves run.
         """
 
-        # Read saved parameters file
-        params = np.load(file=parameter_file, allow_pickle=True)
+        repo = git.Repo('.', search_parent_directories=True)
+
+        if os.path.exists(repo.working_tree_dir + '/files/parameter_file_' + str(realizations)):
+            # Read saved parameters file
+            params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations),
+                             allow_pickle=True)
+        else:
+            parameters = sift.parameters()
+            parameters.create_parameter_file(angular_resolution=self.angular_resolution, realizations=realizations)
+            params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations),
+                             allow_pickle=True)
 
         samples = [[0, 0, 0, 0, 0, 0]]
         samples = np.asarray(samples)
@@ -406,9 +418,17 @@ class Simulation:
 
     def save(self, file_path, file_name):
 
-        # Write simulation output
-        np.save(file=file_path + file_name, arr=self.data, allow_pickle=True)
+        # Open HDF5 file
+        f = h5py.File(name=file_path + file_name, mode="w")
 
-        # Write simulation data
-        with open(file=file_path + file_name + '_object', mode='wb') as f:
-            pickle.dump(obj=self, file=f)
+        # Save data shape
+        f.create_dataset(name="chains", data=self.data, chunks=True)
+
+        f.attrs["y"] = self.y_value
+        f.attrs["electron_temperature"] = self.electron_temperature
+        f.attrs["peculiar_velocity"] = self.peculiar_velocity
+        f.attrs["time"] = self.time
+        f.attrs["a_sides"] = self.a_sides
+        f.attrs["b_sides"] = self.b_sides
+        f.attrs["cmb_anis"] = self.cmb_anis
+        f.attrs["angular_resolution"] = self.angular_resolution

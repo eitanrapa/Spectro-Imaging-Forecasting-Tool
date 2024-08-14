@@ -1,13 +1,11 @@
 import numpy as np
 import camb
+import git
 
 
 class Parameters:
     """
     """
-
-    def __init__(self, file_path):
-        self.file_path = file_path
 
     def create_cmb_map(self, angular_resolution, seed=40):
         """
@@ -128,5 +126,7 @@ class Parameters:
 
         params = params[1:, :]
 
+        repo = git.Repo('.', search_parent_directories=True)
+
         # Write simulation output, change directory/name
-        np.save(file=self.file_path + 'parameter_file_' + str(realizations), arr=params, allow_pickle=True)
+        np.save(repo.working_tree_dir + '/files/parameter_file_' + str(realizations), arr=params, allow_pickle=True)

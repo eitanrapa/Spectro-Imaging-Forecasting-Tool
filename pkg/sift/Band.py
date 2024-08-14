@@ -12,31 +12,12 @@ TCMB = 2.725  # Canonical CMB in Kelvin
 m = 9.109 * 10 ** (-31)  # Electron mass in kgs
 
 
-class Hybrid:
+class Band:
     """
     """
 
-    def __init__(self):
-        pix1 = 150
-        pix2 = 250
-        pix3 = 1000
-        pix4 = 1250
-        pix5 = 750
-
-        res1 = 17
-        res2 = 39
-        res3 = 26
-        res4 = 27
-        res5 = 40
-
-        self.bands = [{'name': 'Band 1', 'nu_meanGHz': 145, 'rms': 0.36, 'type': 'OLIMPO'},
-                      {'name': 'Band 2', 'nu_meanGHz': 250, 'rms': 0.36, 'type': 'OLIMPO'},
-                      {'name': 'Band 3', 'nu_meanGHz': 365, 'FBW': 0.18, 'nu_resGHz': res3,
-                       'N_pixels': pix3, 'type': 'spectrometric'},
-                      {'name': 'Band 4', 'nu_meanGHz': 460, 'FBW': 0.15, 'nu_resGHz': res4,
-                       'N_pixels': pix4, 'type': 'spectrometric'},
-                      {'name': 'Band 5', 'nu_meanGHz': 660, 'FBW': 0.166, 'nu_resGHz': res5,
-                       'N_pixels': pix5, 'type': 'spectrometric'}]
+    def __init__(self, bands):
+        self.bands = bands
 
     #     def sigB(self.bands, time):
     #         """
@@ -65,7 +46,8 @@ class Hybrid:
     def sig_b(self, band, time, tnoise=3.0):
         """
         Noise Equivalent Brightness function with unknown NEPs.
-        Use for apples to apples with OLIMPO photometric mode.
+        Use for apples to apples with OLIMPO photometric mode
+        :param band:
         :param time: Integration time
         :param tnoise: Thermal noise of CMB
         """
@@ -117,32 +99,3 @@ class Hybrid:
                 sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b), axis=None)
 
         return nu_total_array, sigma_b_array
-
-#     # Hybrid 3-3
-# pix1 = 150
-# pix2 = 250
-# pix3 = 1000
-# pix4 = 1250
-# pix5 = 750
-
-# res1 = 17
-# res2 = 39
-# res3 = 26
-# res4 = 27
-# res5 = 40
-
-# spectro_band = [{'name':'Band 1','nu_meanGHz':145,'FBW':0.18,'nu_resGHz':res3,'N_pixels':pix3,'type':'spectrometric'},\
-#       {'name':'Band 3','nu_meanGHz':250,'FBW':0.18,'nu_resGHz':res3,'N_pixels':pix3,'type':'spectrometric'},\
-#       {'name':'Band 3','nu_meanGHz':365,'FBW':0.18,'nu_resGHz':res3,'N_pixels':pix3,'type':'spectrometric'},\
-#       {'name':'Band 4','nu_meanGHz':460,'FBW':0.15,'nu_resGHz':res4,'N_pixels':pix4,'type':'spectrometric'}]
-
-# hybrid_band = [{'name':'Band 1','nu_meanGHz':145,'rms':0.36,'type':'OLIMPO'},\
-#       {'name':'Band 2','nu_meanGHz':250,'rms':0.36,'type':'OLIMPO'},\
-#       {'name':'Band 3','nu_meanGHz':365,'FBW':0.18,'nu_resGHz':res3,'N_pixels':pix3,'type':'spectrometric'},\
-#       {'name':'Band 4','nu_meanGHz':460,'FBW':0.15,'nu_resGHz':res4,'N_pixels':pix4,'type':'spectrometric'}, \
-#       {'name':'Band 5','nu_meanGHz':660,'FBW':0.166,'nu_resGHz':res5,'N_pixels':pix5,'type':'spectrometric'}]
-
-# photometric_band = [{'name':'Band 1','nu_meanGHz':145,'rms':0.36,'type':'OLIMPO'},\
-#        {'name':'Band 2','nu_meanGHz':250,'rms':0.36,'type':'OLIMPO'},\
-#        {'name':'Band 3','nu_meanGHz':365,'rms':0.70,'type':'OLIMPO'},\
-#        {'name':'Band 4','nu_meanGHz':460,'rms':1.76,'type':'OLIMPO'}]

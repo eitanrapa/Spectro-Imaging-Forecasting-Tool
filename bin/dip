@@ -11,26 +11,28 @@ import sift
 import json
 import git
 
+
 class DIP(sift.application):
     """
-    Print simple information about a planetary run
+    Differential Intensity Projection
     """
 
+    run_file = sift.properties.str()
+    run_file.doc = "run file name"
+
+    band_file = sift.properties.str()
+    run_file.doc = "band file name"
+
+    @sift.export
     def main(self, *args, **kwargs):
         """
         Main entry point
         """
 
-        run_file = sift.properties.str()
-        run_file.doc = "run file name"
-
-        band_file = sift.properties.str()
-        run_file.doc = "band file name"
-
         repo = git.Repo('.', search_parent_directories=True)
 
         # Get run parameters
-        with open(repo.working_tree_dir + '/files/' + run_file, 'r') as file:
+        with open(repo.working_tree_dir + '/input/' + self.run_file, 'r') as file:
             params = json.load(file)
         y = params.get('y')
         electron_temperature = params.get('electron_temperature')
@@ -38,12 +40,12 @@ class DIP(sift.application):
         time = params.get('time')
 
         # Get band parameters
-        with open(repo.working_tree_dir + '/files/' + band_file, 'r') as file:
+        with open(repo.working_tree_dir + '/input/' + self.band_file, 'r') as file:
             loaded_band = json.load(file)
 
         band = sift.band(loaded_band)
-        siftsim = sift.simulation(y=y, electron_temperature=electron_temperature, peculiar_velocity=peculiar_vel,
-                                  band=band, time=time)
+        siftsim = sift.simulation(y_value=y, electron_temperature=electron_temperature, peculiar_velocity=peculiar_vel,
+                                  bands=band, time=time)
 
         siftsim.differential_intensity_projection()
 
@@ -54,7 +56,7 @@ class DIP(sift.application):
 # bootstrap
 if __name__ == "__main__":
     # instantiate the application
-    app = DIP(name="run")
+    app = DIP(name="dip")
     # invoke it
     status = app.run()
     # share its status with the shell

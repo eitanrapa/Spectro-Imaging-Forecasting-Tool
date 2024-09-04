@@ -387,14 +387,14 @@ class Simulation:
 
         repo = git.Repo('.', search_parent_directories=True)
 
-        if os.path.exists(repo.working_tree_dir + '/files/parameter_file_' + str(realizations)):
+        if os.path.exists(repo.working_tree_dir + '/files/parameter_file_' + str(realizations) + '.npy'):
             # Read saved parameters file
-            params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations),
+            params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations) + '.npy',
                              allow_pickle=True)
         else:
             parameters = sift.parameters()
             parameters.create_parameter_file(angular_resolution=self.angular_resolution, realizations=realizations)
-            params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations),
+            params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations) + '.npy',
                              allow_pickle=True)
 
         samples = [[0, 0, 0, 0, 0, 0]]

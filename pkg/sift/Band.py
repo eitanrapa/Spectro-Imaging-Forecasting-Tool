@@ -14,6 +14,7 @@ m = 9.109 * 10 ** (-31)  # Electron mass in kgs
 
 class Band:
     """
+    A band class that encapsulates the instrument NESBs
     """
 
     def __init__(self, bands):

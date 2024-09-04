@@ -7,6 +7,31 @@
 #
 
 
+# import and publish pyre symbols
+from pyre import (
+    # protocols, components, traits, and their infrastructure
+    schemata, constraints, properties, protocol, component, foundry,
+    # decorators
+    export, provides,
+    # the manager of the pyre runtime
+    executive,
+    # support for concurrency
+    nexus,
+    # support for workflows, products, and factories
+    flow,
+    # shells
+    application, plexus,
+    # miscellaneous
+    primitives, tracking, units, weaver,
+    )
+
+
+# register the package with the framework
+package = executive.registerPackage(name='sift', file=__file__)
+# save the geography
+home, prefix, defaults = package.layout()
+
+
 # publish the local modules
 # the bindings
 from .ext import libsift
@@ -16,6 +41,7 @@ from .Simulation import Simulation as simulation
 from .Parameters import Parameters as parameters
 from .Projection import Projection as projection
 from .Band import Band as band
+
 
 # by convention
 __version__ = meta.version

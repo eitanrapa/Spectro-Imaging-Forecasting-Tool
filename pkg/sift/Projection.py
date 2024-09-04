@@ -8,6 +8,7 @@ import h5py
 
 class Projection:
     """
+    A projection class that manages outputs and plots
     """
 
     def __init__(self, file_path):

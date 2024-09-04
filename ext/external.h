@@ -10,6 +10,8 @@
 // STL
 #include <string>
 
+// journal
+#include <pyre/journal.h>
 
 // pybind support
 #include <pybind11/pybind11.h>

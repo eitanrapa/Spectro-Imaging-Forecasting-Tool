@@ -5,6 +5,7 @@ import git
 
 class Parameters:
     """
+    A parameter class that encapsulates creation of auxiliary parameters.
     """
 
     def create_cmb_map(self, angular_resolution, seed=40):

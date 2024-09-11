@@ -110,7 +110,7 @@ Resolves for y-value, electron temperature, peculiar velocity, profile of CIB, C
           - conda-forge
 
             
-            dependencies:
+        dependencies:
           - python
           - git
           - gcc

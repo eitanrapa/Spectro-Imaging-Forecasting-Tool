@@ -37,6 +37,7 @@ class DIP(sift.application):
         y = params.get('y')
         electron_temperature = params.get('electron_temperature')
         peculiar_vel = params.get('peculiar_velocity')
+        temperature_precision = params.get('temperature_precision')
         time = params.get('time')
 
         # Get band parameters
@@ -45,7 +46,7 @@ class DIP(sift.application):
 
         band = sift.band(loaded_band)
         siftsim = sift.simulation(y_value=y, electron_temperature=electron_temperature, peculiar_velocity=peculiar_vel,
-                                  bands=band, time=time)
+                                  temperature_precision=temperature_precision, bands=band, time=time)
 
         siftsim.differential_intensity_projection()
 

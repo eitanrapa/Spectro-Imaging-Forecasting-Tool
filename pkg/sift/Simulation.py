@@ -15,10 +15,11 @@ c = 299792458.0  # Speed of light - [c] = m/s
 h_p = 6.626068e-34  # Planck's constant in SI units
 k_b = 1.38065e-23  # Boltzmann constant in SI units
 MJyperSrtoSI = 1e-20  # MegaJansky/Sr to SI units
-GHztoHz = 1e9  # Gigahertz to hertz
+GHztoHz = 1e9  # Gigahertz to Hertz
 HztoGHz = 1e-9  # Hertz to Gigahertz
 TCMB = 2.725  # Canonical CMB in Kelvin
 m = 9.109 * 10 ** (-31)  # Electron mass in kgs
+KeVtoKelvin = 11604525.0061598  # Conversion from KeV to Kelvin
 
 
 def d_b(dt, frequency):
@@ -84,8 +85,8 @@ def sides_continuum(freq, long, lat, angular_resolution=3.0):
     total_SIDES = np.zeros(shape=751)
 
     # Rebinning given 0.5 angular resolution
-    for col in range(int(2*angular_resolution)):
-        for row in range(int(2*angular_resolution)):
+    for col in range(int(2 * angular_resolution)):
+        for row in range(int(2 * angular_resolution)):
             total_SIDES += image_data[:, long + row, lat + col] * MJyperSrtoSI
     total_SIDES = total_SIDES / 36
 
@@ -125,7 +126,7 @@ def tau_to_y(tau, temperature):
 
     if tau == 0:
         return 0
-    return (tau * (temperature * 11604525.0061598) * k_b) / (m * (c ** 2))
+    return (tau * (temperature * KeVtoKelvin) * k_b) / (m * (c ** 2))
 
 
 def y_to_tau(y, temperature):
@@ -138,7 +139,7 @@ def y_to_tau(y, temperature):
 
     if y == 0:
         return 0
-    return (m * (c ** 2) * y) / (k_b * (temperature * 11604525.0061598))
+    return (m * (c ** 2) * y) / (k_b * (temperature * KeVtoKelvin))
 
 
 def interpolate(freq, datax, datay):
@@ -161,8 +162,8 @@ class Simulation:
     definitions, and integration time for an observation.
     """
 
-    def __init__(self, y_value, electron_temperature, peculiar_velocity, bands, time, angular_resolution=3.0,
-                 a_sides=1, b_sides=1):
+    def __init__(self, y_value, electron_temperature, peculiar_velocity, bands, time, temperature_precision,
+                 angular_resolution=3.0, a_sides=1, b_sides=1):
         self.y_value = y_value
         self.electron_temperature = electron_temperature
         self.peculiar_velocity = peculiar_velocity
@@ -172,6 +173,7 @@ class Simulation:
         self.b_sides = b_sides
         self.cmb_anis = 0
         self.angular_resolution = angular_resolution
+        self.temperature_precision = temperature_precision
         self.data = None
 
     def differential_intensity_projection(self):
@@ -291,9 +293,10 @@ class Simulation:
 
         # Gaussian priors for CMB and galaxy cluster temp
         mu_temp = self.electron_temperature
-        sigma_temp = self.electron_temperature / 20  # 5% precision
+        sigma_temp = self.electron_temperature * (self.temperature_precision * 0.01)  # 5% precision
 
         mu_cmb = 0
+        # Empirical sigma of CMB map
         sigma_cmb = 110e-6  # 110 microKelvin
 
         # Convolved Gaussians in log space
@@ -417,6 +420,12 @@ class Simulation:
         self.data = samples
 
     def save(self, file_path, file_name):
+        """
+        Save the run to a file
+        :param file_path: Path where to save run
+        :param file_name: Name of run to save
+        :return: None
+        """
 
         # Open HDF5 file
         f = h5py.File(name=file_path + file_name, mode="w")
@@ -432,3 +441,4 @@ class Simulation:
         f.attrs["b_sides"] = self.b_sides
         f.attrs["cmb_anis"] = self.cmb_anis
         f.attrs["angular_resolution"] = self.angular_resolution
+        f.attrs["temperature_precision"] = self.temperature_precision

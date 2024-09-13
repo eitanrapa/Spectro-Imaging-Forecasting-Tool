@@ -24,7 +24,7 @@ class Projection:
         # Read simulation output
         f = h5py.File(name=self.file_path + file_name, mode='r')
 
-        data = f["chains"]
+        data = f["chains"][:]
 
         # Create labels for contour plot
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
@@ -57,8 +57,8 @@ class Projection:
 
         f2 = h5py.File(name=self.file_path + file_name2, mode='r')
 
-        data1 = f1["chains"]
-        data2 = f2["chains"]
+        data1 = f1["chains"][:]
+        data2 = f2["chains"][:]
 
         y_value = f1.attrs["y"]
         electron_temperature = f1.attrs["electron_temperature"]
@@ -89,7 +89,7 @@ class Projection:
         # Read simulation output
         f = h5py.File(name=self.file_path + file_name, mode='r')
 
-        data = f["chains"]
+        data = f["chains"][:]
 
         # Create labels for contour plot    # Create labels for contour plot
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
@@ -108,13 +108,15 @@ class Projection:
 
     def statistics(self, file_name):
         """
-
+        Get some statistics on the run
+        :param file_name: name of file to access
+        :return: mean and standard deviation of y, pec vel
         """
 
         # Read simulation output
         f = h5py.File(name=self.file_path + file_name, mode='r')
 
-        data = f["chains"]
+        data = f["chains"][:]
 
         y_mean = np.mean(data[:, 0])
         y_std = median_abs_deviation(data[:, 0])
@@ -126,4 +128,4 @@ class Projection:
         print("Median of peculiar velocity = " + str(pec_vel_mean))
         print("Median of peculiar velocity = " + str(pec_vel_std))
 
-        return y_mean, y_std,
+        return y_mean, y_std, pec_vel_mean, pec_vel_std

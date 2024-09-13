@@ -51,6 +51,7 @@ class Band:
         :param band:
         :param time: Integration time
         :param tnoise: Thermal noise of CMB
+        :return: frequency space and NESBs
         """
 
         BW_GHz = band['nu_meanGHz'] * band['FBW']
@@ -78,6 +79,11 @@ class Band:
         return nu_vec, sigma_B
 
     def get_sig_b(self, time):
+        """
+        Access the sig_b function
+        :param time: Band integration time
+        :return: The total frequency space, the NESB per frequency
+        """
 
         nu_total_array = np.empty(0)
         sigma_b_array = np.empty(0)

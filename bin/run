@@ -45,8 +45,9 @@ class Run(sift.application):
         discard_n = params.get('discard_n')
         thin_n = params.get('thin_n')
         angular_resolution = params.get('angular_resolution')
+        temperature_precision = params.get('temperature_precision')
         run_name = params.get('run_name')
-        save_path = params.get('run_path')
+        save_path = params.get('save_path')
 
         # Get band parameters
         with open(repo.working_tree_dir + '/input/' + self.band_file, 'r') as file:
@@ -54,7 +55,8 @@ class Run(sift.application):
 
         band = sift.band(loaded_band)
         siftsim = sift.simulation(y_value=y, electron_temperature=electron_temperature, peculiar_velocity=peculiar_vel,
-                                  bands=band, time=time, angular_resolution=angular_resolution)
+                                  bands=band, time=time, temperature_precision=temperature_precision,
+                                  angular_resolution=angular_resolution)
 
         siftsim.run_sim(chain_length=chain_length, discard_n=discard_n, walkers=walkers, processors_pool=processors,
                         realizations=realizations, thin_n=thin_n)

@@ -1,3 +1,3 @@
-{"y": 5.4e-05, "electron_temperature": 5.0, "peculiar_velocity": 1e-11, "time": 1.152e6, "realizations": 100,
+{"y": 1.8e-05, "electron_temperature": 5.0, "peculiar_velocity": 1e-11, "time": 72000, "realizations": 100,
   "processors": 26, "chain_length": 12000, "walkers": 100, "discard_n": 2000, "thin_n":200, "angular_resolution": 3.0,
 "temperature_precision":10, "run_name": "run_1", "save_path": "/home/erapapor/kraken-bak/SIFT-Files/runs/"}

@@ -2,6 +2,12 @@ import numpy as np
 import camb
 import git
 
+# Constants
+c = 299792458.0  # Speed of light - [c] = m/s
+h_p = 6.626068e-34  # Planck's constant in SI units
+k_b = 1.38065e-23  # Boltzmann constant in SI units
+TCMB = 2.725  # Canonical CMB in Kelvin
+
 
 class Parameters:
     """
@@ -88,11 +94,38 @@ class Parameters:
 
         return CMB_T
 
+    def get_tsz(self):
+        """
+        Returns the y value of 1 sigma tsz anisotropy
+        :return: y value
+        """
+
+        # Frequency of value measured by SPT
+        frequency = 143e9
+        x_b = (h_p / (k_b * TCMB)) * frequency
+        bv = 2 * k_b * TCMB * ((frequency ** 2) / (c ** 2)) * (x_b / (np.exp(x_b) - 1))
+        # 1.73 muK is from SPT paper
+        # Modified tSZ function to solve for y value
+        y = (((k_b * 1.73e-6) / (c / frequency) ** 2) /
+             ((x_b * np.exp(x_b)) / (np.exp(x_b) - 1)) * (x_b * ((np.exp(x_b) + 1) / (np.exp(x_b) - 1)) - 4) * bv)
+        return y
+
+    def get_ksz(self):
+        """
+        Returns the temperature of 1 sigma ksz anisotropy
+        :return: ksz temperature
+        """
+
+        # 1.85 muK is from SPT paper
+        temp = 1.85e-6
+        return temp
+
     def create_parameter_file(self, angular_resolution=3.0, realizations=100):
         """
         Creates a file of fiducial parameters for contaminants including CMB, CIB, and secondary tsz and ksz.
         :param angular_resolution:
         :param realizations: amount of realizations
+        :return None:
         """
 
         params = [[0, 0, 0, 0, 0]]
@@ -119,8 +152,8 @@ class Parameters:
 
             # Make CMB secondary anisotropies
             # Numbers determined empirically
-            amp_ksz = np.random.normal(loc=0, scale=6e-7)
-            amp_tsz = np.random.normal(loc=0, scale=6e-7)
+            amp_ksz = np.random.normal(loc=0, scale=self.get_ksz())
+            amp_tsz = np.random.normal(loc=0, scale=self.get_tsz())
 
             params_realization = [[sides_long, sides_lat, amp_cmb, amp_ksz, amp_tsz]]
             params = np.append(arr=params, values=params_realization, axis=0)

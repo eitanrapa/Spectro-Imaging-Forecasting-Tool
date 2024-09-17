@@ -125,7 +125,7 @@ class Projection:
 
         pec_vel_mean = median_abs_deviation(data[:, 2])
         pec_vel_std = median_abs_deviation(data[:, 2])
-        print("Median of peculiar velocity = " + str(pec_vel_mean))
+        print("Mean of peculiar velocity = " + str(pec_vel_mean))
         print("Median of peculiar velocity = " + str(pec_vel_std))
 
         return y_mean, y_std, pec_vel_mean, pec_vel_std

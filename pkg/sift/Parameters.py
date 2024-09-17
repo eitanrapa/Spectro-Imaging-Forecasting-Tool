@@ -265,7 +265,7 @@ class Parameters:
 
         for i in range(N):
             for k in range(N):
-                TSZ_Y = fsolve(func, np.asanyarray([0]), args=[TSZ_T[i][k]])
+                TSZ_Y[i][k] = fsolve(func, np.asanyarray([0]), args=[TSZ_T[i][k]])
 
         return TSZ_Y
 

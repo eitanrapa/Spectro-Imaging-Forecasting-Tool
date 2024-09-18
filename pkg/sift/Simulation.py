@@ -47,7 +47,7 @@ def szpack_signal(frequency, tau, temperature, peculiar_velocity):
     """
 
     original_x_b = (h_p / (k_b * TCMB)) * frequency
-    sz = sift.ext.szPack(tau=tau, temperature=temperature, peculiar_velocity=peculiar_velocity / 3e5)
+    sz = sift.ext.szPack(tau=tau, temperature=temperature, peculiar_velocity=peculiar_velocity)
     x_b = sz.sz_combo_means(original_x_b)
     return x_b * 13.33914078 * (TCMB ** 3) * (original_x_b ** 3) * MJyperSrtoSI
 
@@ -293,7 +293,7 @@ class Simulation:
 
         # Gaussian priors for CMB and galaxy cluster temp
         mu_temp = self.electron_temperature
-        sigma_temp = self.electron_temperature * (self.temperature_precision * 0.01)  # 5% precision
+        sigma_temp = self.electron_temperature * (self.temperature_precision * 0.01)
 
         mu_cmb = 0
         # Empirical sigma of CMB map

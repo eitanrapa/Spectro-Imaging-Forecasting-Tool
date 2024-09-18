@@ -118,14 +118,14 @@ class Projection:
 
         data = f["chains"][:]
 
-        y_mean = np.mean(data[:, 0])
+        y_median = np.median(data[:, 0])
         y_std = median_abs_deviation(data[:, 0])
-        print("Mean of y_value = " + str(y_mean))
-        print("Median of y_value = " + str(y_std))
+        print("Median of y_value = " + str(y_median))
+        print("Standard deviation of y_value = " + str(y_std))
 
-        pec_vel_mean = median_abs_deviation(data[:, 2])
+        pec_vel_median = median_abs_deviation(data[:, 2])
         pec_vel_std = median_abs_deviation(data[:, 2])
-        print("Mean of peculiar velocity = " + str(pec_vel_mean))
-        print("Median of peculiar velocity = " + str(pec_vel_std))
+        print("Median of peculiar velocity = " + str(pec_vel_median))
+        print("Standard deviation of peculiar velocity = " + str(pec_vel_std))
 
-        return y_mean, y_std, pec_vel_mean, pec_vel_std
+        return y_median, y_std, pec_vel_median, pec_vel_std

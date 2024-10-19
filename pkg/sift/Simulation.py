@@ -176,7 +176,7 @@ class Simulation:
         self.temperature_precision = temperature_precision
         self.data = None
 
-    def differential_intensity_projection(self):
+    def differential_intensity_projection(self, amp_cmb, amp_ksz, amp_tsz):
         """
         Plots the spectral distortions of the galaxy cluster along with the CIB background and the instrument bands
         :return: None
@@ -218,6 +218,11 @@ class Simulation:
         nu_total_array, sigma_b_array = self.bands.get_sig_b(time=self.time)
 
         plt.plot(nu_total_array * HztoGHz, sigma_b_array, 'o', lw=7, alpha=1, color='maroon')
+
+        # Plot the average anisotropies
+        plt.plot(freq * HztoGHz, d_b(frequency=freq, dt=amp_cmb), label='CMB anis.')
+        plt.plot(freq * HztoGHz, np.abs(classical_tsz(frequency=freq, y=amp_tsz)), label='tSZ anis.')
+        plt.plot(freq * HztoGHz, d_b(frequency=freq, dt=amp_ksz), label='kSZ anis.')
 
         plt.xscale('log')
         plt.yscale('log')
@@ -282,7 +287,7 @@ class Simulation:
             return -np.inf
         if betac < -0.03 or betac > 0.03:
             return -np.inf
-        if temperature < 2.0 or temperature > 10.0:
+        if temperature < 0.02 or temperature > 10.0:
             return -np.inf
         if a_sides < 0 or a_sides > 5.0:
             return -np.inf

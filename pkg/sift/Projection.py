@@ -123,7 +123,7 @@ class Projection:
         print("Median of y_value = " + str(y_median))
         print("Standard deviation of y_value = " + str(y_std))
 
-        pec_vel_median = median_abs_deviation(data[:, 2])
+        pec_vel_median = np.median(data[:, 2])
         pec_vel_std = median_abs_deviation(data[:, 2])
         print("Median of peculiar velocity = " + str(pec_vel_median))
         print("Standard deviation of peculiar velocity = " + str(pec_vel_std))

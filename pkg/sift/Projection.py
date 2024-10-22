@@ -169,7 +169,7 @@ class Projection:
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
 
         realizations = f.attrs["realizations"]
-        y_value = f.attrs["y_value"]
+        y_value = f.attrs["y"]
 
         data = self.remove_outliers(data, n_sublists=realizations, target_num=y_value, n_remove=remove_outliers)
 
@@ -199,7 +199,7 @@ class Projection:
         data = f["chains"][:]
 
         realizations = f.attrs["realizations"]
-        y_value = f.attrs["y_value"]
+        y_value = f.attrs["y"]
 
         data = self.remove_outliers(data, n_sublists=realizations, target_num=y_value, n_remove=remove_outliers)
 

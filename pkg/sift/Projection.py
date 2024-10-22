@@ -4,6 +4,9 @@ import pygtc
 import numpy as np
 from scipy.stats import median_abs_deviation
 import h5py
+import warnings
+
+warnings.filterwarnings(action="ignore", module="matplotlib")
 
 
 class Projection:
@@ -14,10 +17,71 @@ class Projection:
     def __init__(self, file_path):
         self.file_path = file_path
 
-    def contour_plot_projection(self, file_name):
+    def remove_outliers(self, data, target_num, n_sublists, n_remove):
+
+        # Step 1: Define the function to compute medians of sublists
+        def compute_medians(sublists):
+            return [np.median(sublist) for sublist in sublists]
+
+        # Step 2: Define the function to remove n sublists based on distance from input number
+        def remove_furthest_sublists(sublists, target_num, n_remove):
+            # Compute the average of each sublist
+            averages = [np.mean(sublist) for sublist in sublists]
+
+            # Calculate the absolute difference between each average and the target number
+            differences = [abs(avg - target_num) for avg in averages]
+
+            # Sort the indices of the sublists based on differences, in descending order
+            sorted_indices = np.argsort(differences)[::-1]
+
+            # Indices of the sublists to keep (remove the first n_remove elements)
+            remaining_indices = sorted_indices[n_remove:]
+
+            # Return the remaining indices and the remaining sublists
+            remaining_sublists = [sublists[i] for i in remaining_indices]
+
+            return remaining_sublists, remaining_indices
+
+        # Step 3: Define the function to remove corresponding sublists from all rows
+        def remove_sublists_from_all_rows(data, target_num, n_sublists, n_remove):
+            # Split all rows of the array into sublists
+            split_data = [np.array_split(row, n_sublists) for row in data]
+
+            # Remove sublists from the first row
+            remaining_sublists_first_row, remaining_indices = remove_furthest_sublists(split_data[0], target_num,
+                                                                                       n_remove)
+
+            # Now remove corresponding sublists from all other rows based on remaining_indices
+            remaining_sublists_all_rows = []
+            for row_sublists in split_data:
+                remaining_sublists = [row_sublists[i] for i in remaining_indices]
+                remaining_sublists_all_rows.append(remaining_sublists)
+
+            return remaining_sublists_all_rows
+
+        # Step 4: Define the function to recombine sublists into a full 2D array
+        def recombine_sublists(remaining_sublists_all_rows):
+            # Flatten and concatenate the sublists in each row
+            recombined_rows = [np.concatenate(row_sublists) for row_sublists in remaining_sublists_all_rows]
+
+            # Combine all rows to form a 2D array
+            recombined_array = np.vstack(recombined_rows)
+
+            return recombined_array
+
+        remaining_sublists_all_rows = remove_sublists_from_all_rows(data.T, target_num=target_num,
+                                                                    n_sublists=n_sublists, n_remove=n_remove)
+
+        # Recombine the remaining sublists into a 2D array
+        recombined_data = recombine_sublists(remaining_sublists_all_rows)
+
+        return recombined_data.T
+
+    def contour_plot_projection(self, file_name, remove_outliers=0):
         """
         Plot in corner the contour plot of a specific run.
         :param file_name: name of file containing run
+        :param remove_outliers: how many outliers to remove
         :return: figure and data
         """
 
@@ -34,7 +98,11 @@ class Projection:
         a_sides = f.attrs["a_sides"]
         b_sides = f.attrs["b_sides"]
         cmb_anis = f.attrs["cmb_anis"]
+        realizations = f.attrs["realizations"]
+
         theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides, cmb_anis)
+
+        data = self.remove_outliers(data, n_sublists=realizations, target_num=y_value, n_remove=remove_outliers)
 
         # Plot contour plot
         fig = corner.corner(
@@ -44,11 +112,12 @@ class Projection:
 
         return fig, data
 
-    def contour_plot_double_projection(self, file_name1, file_name2):
+    def contour_plot_double_projection(self, file_name1, file_name2, remove_outliers=0):
         """
         Plot using pygtc a comparison between two runs.
         :param file_name1: name of file containing first run
         :param file_name2: name of file containing second run
+        :param remove_outliers: how many outliers to remove
         :return: figure, data 1 and data2
         """
 
@@ -66,6 +135,10 @@ class Projection:
         a_sides = f1.attrs["a_sides"]
         b_sides = f1.attrs["b_sides"]
         cmb_anis = f1.attrs["cmb_anis"]
+        realizations = f1.attrs["realizations"]
+
+        data1 = self.remove_outliers(data1, n_sublists=realizations, target_num=y_value, n_remove=remove_outliers)
+        data2 = self.remove_outliers(data2, n_sublists=realizations, target_num=y_value, n_remove=remove_outliers)
 
         chain_labels = ["Run {}".format(str(file_name1)), "Run {}".format(str(file_name2))]
 
@@ -79,10 +152,11 @@ class Projection:
 
         return gtc, data1, data2
 
-    def chain_projection(self, file_name):
+    def chain_projection(self, file_name, remove_outliers=0):
         """
         Plots the MCMC chains of a run.
         :param file_name: name of file containing run
+        :param remove_outliers: how many outliers to remove
         :return: figure and axes
         """
 
@@ -93,6 +167,11 @@ class Projection:
 
         # Create labels for contour plot    # Create labels for contour plot
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
+
+        realizations = f.attrs["realizations"]
+        y_value = f.attrs["y_value"]
+
+        data = self.remove_outliers(data, n_sublists=realizations, target_num=y_value, n_remove=remove_outliers)
 
         fig, axes = plt.subplots(6, figsize=(30, 40), sharex=True)
         ndim = 6
@@ -106,10 +185,11 @@ class Projection:
 
         return fig, axes
 
-    def statistics(self, file_name):
+    def statistics(self, file_name, remove_outliers=0):
         """
         Get some statistics on the run
         :param file_name: name of file to access
+        :param remove_outliers: how many outliers to remove
         :return: mean and standard deviation of y, pec vel
         """
 
@@ -117,6 +197,11 @@ class Projection:
         f = h5py.File(name=self.file_path + file_name, mode='r')
 
         data = f["chains"][:]
+
+        realizations = f.attrs["realizations"]
+        y_value = f.attrs["y_value"]
+
+        data = self.remove_outliers(data, n_sublists=realizations, target_num=y_value, n_remove=remove_outliers)
 
         y_median = np.median(data[:, 0])
         y_std = median_abs_deviation(data[:, 0])

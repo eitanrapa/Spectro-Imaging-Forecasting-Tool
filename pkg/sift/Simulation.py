@@ -424,11 +424,16 @@ class Simulation:
 
         self.data = samples
 
-    def save(self, file_path, file_name):
+    def save(self, file_path, file_name, chain_length, discard_n, walkers, realizations, thin_n):
         """
         Save the run to a file
         :param file_path: Path where to save run
         :param file_name: Name of run to save
+        :param walkers: Number of walkers used for MCMC
+        :param chain_length: Amount of samples to take for each chain
+        :param realizations: Realizations which to concatenate
+        :param discard_n: Discard first n from chain of MCMC
+        :param thin_n: Discard every n from chain of MCMC
         :return: None
         """
 
@@ -447,3 +452,9 @@ class Simulation:
         f.attrs["cmb_anis"] = self.cmb_anis
         f.attrs["angular_resolution"] = self.angular_resolution
         f.attrs["temperature_precision"] = self.temperature_precision
+        f.attrs["chain_length"] = chain_length
+        f.attrs["discard_n"] = discard_n
+        f.attrs["walkers"] = walkers
+        f.attrs["realizations"] = realizations
+        f.attrs["thin_n"] = thin_n
+

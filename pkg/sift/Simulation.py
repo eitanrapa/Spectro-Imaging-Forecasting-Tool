@@ -255,7 +255,7 @@ class Simulation:
         # CMB
         cmb_template = d_b(dt=cmb_anis, frequency=freq)
 
-        template_total = sz_template + sides_template + cmb_template
+        template_total = sz_template + sides_template # + cmb_template
 
         return template_total
 
@@ -457,4 +457,3 @@ class Simulation:
         f.attrs["walkers"] = walkers
         f.attrs["realizations"] = realizations
         f.attrs["thin_n"] = thin_n
-

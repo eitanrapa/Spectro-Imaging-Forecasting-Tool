@@ -41,6 +41,7 @@ class DIP(sift.application):
         temperature_precision = params.get('temperature_precision')
         time = params.get('time')
         realizations = params.get('realizations')
+        angular_resolution = params.get('angular_resolution')
 
         # Get band parameters
         with open(repo.working_tree_dir + '/input/' + self.band_file, 'r') as file:
@@ -56,7 +57,7 @@ class DIP(sift.application):
 
         else:
             parameters = sift.parameters()
-            parameters.create_parameter_file(angular_resolution=self.angular_resolution, realizations=realizations)
+            parameters.create_parameter_file(angular_resolution=angular_resolution, realizations=realizations)
             params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations) + '.npy',
                              allow_pickle=True)
 

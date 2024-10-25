@@ -306,7 +306,10 @@ class Parameters:
             # Make CMB secondary anisotropies
             # Numbers determined empirically
             amp_ksz = ksz_map[long, lat]
+            amp_ksz = amp_ksz - np.mean(ksz_map[long - 2:long + 3, lat - 2:lat + 3])
+
             amp_tsz = tsz_map[long, lat]
+            amp_tsz = amp_tsz - np.mean(tsz_map[long - 2:long + 3, lat - 2:lat + 3])
 
             params_realization = [[sides_long, sides_lat, amp_cmb, amp_ksz, amp_tsz]]
             params = np.append(arr=params, values=params_realization, axis=0)

@@ -61,9 +61,9 @@ class DIP(sift.application):
             params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations) + '.npy',
                              allow_pickle=True)
 
-        amp_cmb = np.average(params[:, 2])
-        amp_ksz = np.average(params[:, 3])
-        amp_tsz = np.average(params[:, 4])
+        amp_cmb = np.std(params[:, 2])
+        amp_ksz = np.std(params[:, 3])
+        amp_tsz = np.std(params[:, 4])
 
         band = sift.band(loaded_band)
         siftsim = sift.simulation(y_value=y, electron_temperature=electron_temperature, peculiar_velocity=peculiar_vel,

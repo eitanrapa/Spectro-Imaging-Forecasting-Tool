@@ -30,10 +30,14 @@ def d_b(dt, frequency):
     :return: Spectral brightness distribution
     """
 
-    temp = TCMB / (1 + dt)
-    x = (h_p / (k_b * temp)) * frequency
-    I = ((2 * h_p) / (c ** 2)) * (k_b * temp / h_p) ** 3
-    return I * (x ** 4 * np.exp(x) / ((np.exp(x) - 1) ** 2)) * dt
+    # Convert inputs to float64
+    nu = np.asarray(frequency, dtype=np.float64)
+    dt = np.float64(dt)
+
+    # Planck's law for spectral radiance
+    total = (2 * h_p * nu**3 / c**2) / (np.exp(h_p * nu / (k_b * (dt + TCMB))) - 1)
+    cmb = (2 * h_p * nu**3 / c**2) / (np.exp(h_p * nu / (k_b * TCMB)) - 1)
+    return total - cmb
 
 
 def szpack_signal(frequency, tau, temperature, peculiar_velocity):
@@ -302,7 +306,7 @@ class Simulation:
 
         mu_cmb = 0
         # Empirical sigma of CMB map
-        sigma_cmb = 110e-6  # 110 microKelvin
+        sigma_cmb = 10e-6  # 10 microKelvin
 
         # Convolved Gaussians in log space
         temp_gaussian = (1.0 / (sigma_temp * np.sqrt(2 * np.pi))) * np.exp(
@@ -360,7 +364,7 @@ class Simulation:
         tsz_template = classical_tsz(y=tsz_anis, frequency=nu_total_array)
         ksz_template = d_b(dt=ksz_anis, frequency=nu_total_array)
 
-        total_sz_array = sz_template + sides_template + tsz_template + ksz_template + cmb_template
+        total_sz_array = sz_template + sides_template + cmb_template + tsz_template + ksz_template
 
         # Define and run MCMC
         theta = self.y_value, self.electron_temperature, self.peculiar_velocity, self.a_sides, self.b_sides, \
@@ -380,7 +384,8 @@ class Simulation:
 
         return sampler
 
-    def run_sim(self, chain_length=12000, walkers=100, realizations=100, discard_n=2000, processors_pool=30):
+    def run_sim(self, chain_length=12000, walkers=100, realizations=100, discard_n=2000,
+                thin_n=200, processors_pool=30):
         """
         Function used to analyze parameters and chains after calling MCMC.
         :param walkers: Number of walkers used for MCMC
@@ -388,6 +393,7 @@ class Simulation:
         :param chain_length: Amount of samples to take for each chain
         :param realizations: Realizations which to concatenate
         :param discard_n: Discard first n from chain of MCMC
+        :param thin_n: Discard every n from chain of MCMC
         :return None, saves run.
         """
 
@@ -415,13 +421,13 @@ class Simulation:
             anisotropies = (amp_ksz, amp_tsz)
             sampler = self.mcmc(anisotropies=anisotropies, long=sides_long, lat=sides_lat, walkers=walkers,
                                 processors=processors_pool, chain_length=chain_length)
-            samples = np.append(arr=samples, values=sampler.get_chain(discard=discard_n, flat=True), axis=0)
-
+            samples = np.append(arr=samples, values=sampler.get_chain(discard=discard_n, flat=True, thin=thin_n),
+                                axis=0)
         samples = samples[1:, :]
 
         self.data = samples
 
-    def save(self, file_path, file_name, chain_length, discard_n, walkers, realizations):
+    def save(self, file_path, file_name, chain_length, discard_n, walkers, realizations, thin_n):
         """
         Save the run to a file
         :param file_path: Path where to save run
@@ -430,6 +436,7 @@ class Simulation:
         :param chain_length: Amount of samples to take for each chain
         :param realizations: Realizations which to concatenate
         :param discard_n: Discard first n from chain of MCMC
+        :param thin_n: Discard every n from chain of MCMC
         :return: None
         """
 
@@ -452,3 +459,4 @@ class Simulation:
         f.attrs["discard_n"] = discard_n
         f.attrs["walkers"] = walkers
         f.attrs["realizations"] = realizations
+        f.attrs["thin_n"] = thin_n

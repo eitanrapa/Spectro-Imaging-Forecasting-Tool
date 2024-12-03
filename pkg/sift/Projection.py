@@ -19,12 +19,8 @@ class Projection:
 
     def remove_outlier_simulations(self, data, target_num, n_sublists, n_remove):
 
-        # Step 1: Define the function to compute medians of sublists
-        def compute_medians(sublists):
-            return [np.median(sublist) for sublist in sublists]
-
-        # Step 2: Define the function to remove n sublists based on distance from input number
         def remove_furthest_sublists(sublists, target_num, n_remove):
+
             # Compute the average of each sublist
             averages = [np.mean(sublist) for sublist in sublists]
 
@@ -44,6 +40,7 @@ class Projection:
 
         # Step 3: Define the function to remove corresponding sublists from all rows
         def remove_sublists_from_all_rows(data, target_num, n_sublists, n_remove):
+
             # Split all rows of the array into sublists
             split_data = [np.array_split(row, n_sublists) for row in data]
 
@@ -61,6 +58,7 @@ class Projection:
 
         # Step 4: Define the function to recombine sublists into a full 2D array
         def recombine_sublists(remaining_sublists_all_rows):
+
             # Flatten and concatenate the sublists in each row
             recombined_rows = [np.concatenate(row_sublists) for row_sublists in remaining_sublists_all_rows]
 
@@ -77,43 +75,11 @@ class Projection:
 
         return recombined_data.T
 
-    # Define a function to remove outliers outside the 99th percentile
-    def remove_outliers(self, data, row_indices, percentile):
-
-        data = data.T
-
-        # Calculate lower and upper percentile thresholds for each specified row
-        outlier_indices = set()
-
-        for row_idx in row_indices:
-            row_data = data[row_idx]
-            lower_bound = np.percentile(row_data, (1 - percentile) * 100)
-            upper_bound = np.percentile(row_data, percentile * 100)
-
-            # Find indices where values are outside these bounds
-            outliers = np.where((row_data < lower_bound) | (row_data > upper_bound))[0]
-
-            # Collect all outlier indices
-            outlier_indices.update(outliers)
-
-        # Sort outlier indices in descending order for safe removal
-        outlier_indices = sorted(outlier_indices, reverse=True)
-
-        # Remove outlier indices from each row
-        filtered_data = []
-        for row in data:
-            filtered_row = np.delete(row, outlier_indices)
-            filtered_data.append(filtered_row)
-
-        # Stack rows back into a 2D array
-        return np.vstack(filtered_data).T
-
-    def contour_plot_projection(self, file_name, remove_outlier_simulations=0, remove_outliers=0):
+    def contour_plot_projection(self, file_name, remove_outlier_simulations=0):
         """
         Plot in corner the contour plot of a specific run.
         :param file_name: name of file containing run
         :param remove_outlier_simulations: how many outlier sims to remove
-        :param remove_outliers: outlier filtering
         :return: figure and data
         """
 
@@ -137,8 +103,6 @@ class Projection:
         data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
                                                n_remove=remove_outlier_simulations)
 
-        data = self.remove_outliers(data, row_indices=[3, 4], percentile=remove_outliers*0.01)
-
         # Plot contour plot
         fig = corner.corner(
             data=data, labels=labels, truths=theta, smooth=1
@@ -147,14 +111,12 @@ class Projection:
 
         return fig, data
 
-    def contour_plot_double_projection(self, file_name1, file_name2, remove_outlier_simulations=0,
-                                       remove_outliers=99):
+    def contour_plot_double_projection(self, file_name1, file_name2, remove_outlier_simulations=0):
         """
         Plot using pygtc a comparison between two runs.
         :param file_name1: name of file containing first run
         :param file_name2: name of file containing second run
         :param remove_outlier_simulations: how many outlier sims to remove
-        :param remove_outliers: outlier filtering
         :return: figure, data 1 and data2
         """
 
@@ -177,13 +139,8 @@ class Projection:
         data1 = self.remove_outlier_simulations(data1, n_sublists=realizations, target_num=y_value,
                                                 n_remove=remove_outlier_simulations)
 
-        data1 = self.remove_outliers(data1, row_indices=[3, 4], percentile=remove_outliers*0.01)
-
         data2 = self.remove_outlier_simulations(data2, n_sublists=realizations, target_num=y_value,
                                                 n_remove=remove_outlier_simulations)
-
-        data2 = self.remove_outliers(data2, row_indices=[3, 4], percentile=remove_outliers*0.01)
-
 
         chain_labels = ["Run {}".format(str(file_name1)), "Run {}".format(str(file_name2))]
 
@@ -197,12 +154,11 @@ class Projection:
 
         return gtc, data1, data2
 
-    def chain_projection(self, file_name, remove_outlier_simulations=0, remove_outliers=0):
+    def chain_projection(self, file_name, remove_outlier_simulations=0):
         """
         Plots the MCMC chains of a run.
         :param file_name: name of file containing run
         :param remove_outlier_simulations: how many outlier sims to remove
-        :param remove_outliers: outlier filtering
         :return: figure and axes
         """
 
@@ -220,8 +176,6 @@ class Projection:
         data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
                                                n_remove=remove_outlier_simulations)
 
-        data = self.remove_outliers(data, row_indices=[3, 4], percentile=remove_outliers*0.01)
-
         fig, axes = plt.subplots(5, figsize=(30, 40), sharex=True)
         ndim = 5
         for i in range(ndim):
@@ -234,12 +188,11 @@ class Projection:
 
         return fig, axes
 
-    def statistics(self, file_name, remove_outlier_simulations=0, remove_outliers=0):
+    def statistics(self, file_name, remove_outlier_simulations=0):
         """
         Get some statistics on the run
         :param file_name: name of file to access
         :param remove_outlier_simulations: how many outlier sims to remove
-        :param remove_outliers: outlier filtering
         :return: mean and standard deviation of y, pec vel
         """
 
@@ -253,8 +206,6 @@ class Projection:
 
         data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
                                                n_remove=remove_outlier_simulations)
-
-        data = self.remove_outliers(data, row_indices=[3, 4], percentile=remove_outliers*0.01)
 
         y_median = np.median(data[:, 0])
         y_std = median_abs_deviation(data[:, 0])

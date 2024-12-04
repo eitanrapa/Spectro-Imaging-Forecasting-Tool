@@ -33,7 +33,7 @@ def d_b(dt, frequency):
     temp = TCMB / (1 + dt)
     x = (h_p / (k_b * temp)) * frequency
     I = ((2 * h_p) / (c ** 2)) * (k_b * temp / h_p) ** 3
-    return I * (x ** 4 * np.exp(x) / ((np.exp(x) - 1) ** 2)) * dt
+    return I * (x ** 4 * np.exp(x) / ((np.exp(x) - 1) ** 2)) / temp * dt
 
 
 def szpack_signal(frequency, tau, temperature, peculiar_velocity):

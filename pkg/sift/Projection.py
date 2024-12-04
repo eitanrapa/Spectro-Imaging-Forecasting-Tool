@@ -95,10 +95,9 @@ class Projection:
         peculiar_velocity = f.attrs["peculiar_velocity"]
         a_sides = f.attrs["a_sides"]
         b_sides = f.attrs["b_sides"]
-        cmb_anis = f.attrs["cmb_anis"]
         realizations = f.attrs["realizations"]
 
-        theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides, cmb_anis)
+        theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides)
 
         data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
                                                n_remove=remove_outlier_simulations)
@@ -133,7 +132,6 @@ class Projection:
         peculiar_velocity = f1.attrs["peculiar_velocity"]
         a_sides = f1.attrs["a_sides"]
         b_sides = f1.attrs["b_sides"]
-        cmb_anis = f1.attrs["cmb_anis"]
         realizations = f1.attrs["realizations"]
 
         data1 = self.remove_outlier_simulations(data1, n_sublists=realizations, target_num=y_value,
@@ -144,8 +142,8 @@ class Projection:
 
         chain_labels = ["Run {}".format(str(file_name1)), "Run {}".format(str(file_name2))]
 
-        labels = ('y', 'temperature', 'peculiar_vel', 'a_sides', 'b_sides', 'CMB')
-        theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides, cmb_anis)
+        labels = ('y', 'temperature', 'peculiar_vel', 'a_sides', 'b_sides')
+        theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides)
 
         # Plot contour plot
         gtc = pygtc.plotGTC(chains=[data1, data2], chainLabels=chain_labels, truths=theta, paramNames=labels,
@@ -168,7 +166,7 @@ class Projection:
         data = f["chains"][:]
 
         # Create labels for contour plot    # Create labels for contour plot
-        labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides', 'CMB')
+        labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides')
 
         realizations = f.attrs["realizations"]
         y_value = f.attrs["y"]
@@ -176,7 +174,7 @@ class Projection:
         data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
                                                n_remove=remove_outlier_simulations)
 
-        fig, axes = plt.subplots(5, figsize=(30, 40), sharex=True)
+        fig, axes = plt.subplots(4, figsize=(30, 40), sharex=True)
         ndim = 5
         for i in range(ndim):
             ax = axes[i]

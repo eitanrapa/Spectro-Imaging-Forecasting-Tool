@@ -30,14 +30,10 @@ def d_b(dt, frequency):
     :return: Spectral brightness distribution
     """
 
-    # Convert inputs to float64
-    nu = np.asarray(frequency, dtype=np.float64)
-    dt = np.float64(dt)
-
-    # Planck's law for spectral radiance
-    total = (2 * h_p * nu**3 / c**2) / (np.exp(h_p * nu / (k_b * (dt + TCMB))) - 1)
-    cmb = (2 * h_p * nu**3 / c**2) / (np.exp(h_p * nu / (k_b * TCMB)) - 1)
-    return total - cmb
+    temp = TCMB / (1 + dt)
+    x = (h_p / (k_b * temp)) * frequency
+    I = ((2 * h_p) / (c ** 2)) * (k_b * temp / h_p) ** 3
+    return I * (x ** 4 * np.exp(x) / ((np.exp(x) - 1) ** 2)) * dt
 
 
 def szpack_signal(frequency, tau, temperature, peculiar_velocity):
@@ -175,7 +171,6 @@ class Simulation:
         self.time = time
         self.a_sides = a_sides
         self.b_sides = b_sides
-        self.cmb_anis = 0
         self.angular_resolution = angular_resolution
         self.temperature_precision = temperature_precision
         self.data = None
@@ -247,7 +242,7 @@ class Simulation:
         :return: Total spectral brightness distribution
         """
 
-        y, temperature, peculiar_velocity, a_sides, b_sides, cmb_anis = theta
+        y, temperature, peculiar_velocity, a_sides, b_sides = theta
 
         # SIDES
         sides_template = sides_average(freq=freq, a_sides=a_sides, b_sides=b_sides)
@@ -256,10 +251,7 @@ class Simulation:
         sz_template = szpack_signal(frequency=freq, tau=y_to_tau(y=y, temperature=temperature),
                                     temperature=temperature, peculiar_velocity=peculiar_velocity)
 
-        # CMB
-        cmb_template = d_b(dt=cmb_anis, frequency=freq)
-
-        template_total = sz_template + sides_template + cmb_template
+        template_total = sz_template + sides_template
 
         return template_total
 
@@ -283,7 +275,7 @@ class Simulation:
         :return: Infinity if outside prior bounds, or a prior probability otherwise
         """
 
-        y, temperature, peculiar_velocity, a_sides, b_sides, cmb_anis = theta
+        y, temperature, peculiar_velocity, a_sides, b_sides = theta
         betac = peculiar_velocity / 3e5
 
         # "Top-hat" prior for parameters
@@ -297,23 +289,16 @@ class Simulation:
             return -np.inf
         if b_sides < 0 or b_sides > 5.0:
             return -np.inf
-        if cmb_anis < -1e-3 or cmb_anis > 1e-3:
-            return -np.inf
 
         # Gaussian priors for CMB and galaxy cluster temp
         mu_temp = self.electron_temperature
         sigma_temp = self.electron_temperature * (self.temperature_precision * 0.01)
 
-        mu_cmb = 0
-        # Empirical sigma of CMB map
-        sigma_cmb = 10e-6  # 10 microKelvin
-
         # Convolved Gaussians in log space
         temp_gaussian = (1.0 / (sigma_temp * np.sqrt(2 * np.pi))) * np.exp(
             -0.5 * ((temperature - mu_temp) / sigma_temp) ** 2)
-        cmb_gaussian = (1.0 / (sigma_cmb * np.sqrt(2 * np.pi))) * np.exp(-0.5 * ((cmb_anis - mu_cmb) / sigma_cmb) ** 2)
 
-        return np.log(temp_gaussian) + np.log(cmb_gaussian)
+        return np.log(temp_gaussian)
 
     def log_probability(self, theta, freq, data, noise):
         """
@@ -342,7 +327,7 @@ class Simulation:
         :return: The sampler object from emcee with chains
         """
 
-        ksz_anis, tsz_anis = anisotropies
+        cmb_anis, ksz_anis, tsz_anis = anisotropies
 
         nu_total_array, sigma_b_array = self.bands.get_sig_b(time=self.time)
 
@@ -357,18 +342,17 @@ class Simulation:
                                     temperature=self.electron_temperature,
                                     peculiar_velocity=self.peculiar_velocity)
 
-        # CMB
-        cmb_template = d_b(dt=self.cmb_anis, frequency=nu_total_array)
+        # CMB primary anisotropy
+        cmb_template = d_b(dt=cmb_anis, frequency=nu_total_array)
 
         # Secondary anisotropies
         tsz_template = classical_tsz(y=tsz_anis, frequency=nu_total_array)
         ksz_template = d_b(dt=ksz_anis, frequency=nu_total_array)
 
-        total_sz_array = sz_template + sides_template + cmb_template + tsz_template + ksz_template
+        total_sz_array = sz_template + sides_template + cmb_template + ksz_template + tsz_template
 
         # Define and run MCMC
-        theta = self.y_value, self.electron_temperature, self.peculiar_velocity, self.a_sides, self.b_sides, \
-            self.cmb_anis
+        theta = self.y_value, self.electron_temperature, self.peculiar_velocity, self.a_sides, self.b_sides
         pos = []
         for item in theta:
             pos.append(item * (1 + 0.01 * np.random.randn(walkers)))
@@ -409,16 +393,16 @@ class Simulation:
             params = np.load(file=repo.working_tree_dir + '/files/parameter_file_' + str(realizations) + '.npy',
                              allow_pickle=True)
 
-        samples = [[0, 0, 0, 0, 0, 0]]
+        samples = [[0, 0, 0, 0, 0]]
         samples = np.asarray(samples)
 
         for i in range(realizations):
             sides_long = int(params[i, 0])
             sides_lat = int(params[i, 1])
-            self.cmb_anis = params[i, 2]
+            amp_cmb = params[i, 2]
             amp_ksz = params[i, 3]
             amp_tsz = params[i, 4]
-            anisotropies = (amp_ksz, amp_tsz)
+            anisotropies = (amp_cmb, amp_ksz, amp_tsz)
             sampler = self.mcmc(anisotropies=anisotropies, long=sides_long, lat=sides_lat, walkers=walkers,
                                 processors=processors_pool, chain_length=chain_length)
             samples = np.append(arr=samples, values=sampler.get_chain(discard=discard_n, flat=True, thin=thin_n),
@@ -452,7 +436,6 @@ class Simulation:
         f.attrs["time"] = self.time
         f.attrs["a_sides"] = self.a_sides
         f.attrs["b_sides"] = self.b_sides
-        f.attrs["cmb_anis"] = self.cmb_anis
         f.attrs["angular_resolution"] = self.angular_resolution
         f.attrs["temperature_precision"] = self.temperature_precision
         f.attrs["chain_length"] = chain_length

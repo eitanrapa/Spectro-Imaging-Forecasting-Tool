@@ -51,7 +51,7 @@ class Parameters:
     A parameter class that encapsulates creation of auxiliary parameters.
     """
 
-    def create_cmb_map(self, angular_resolution, realizations, seed=40):
+    def create_cmb_map(self, angular_resolution, realizations, seed=None):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin
@@ -138,10 +138,11 @@ class Parameters:
             cmb_anis.append(sim_map_filtered[33:34, 33:34] - sim_map_inpainted[33:34, 33:34])
 
         cmb_anis = np.asarray(cmb_anis).flatten()*1e-6
+        cmb_anis = cmb_anis - np.mean(cmb_anis)
 
         return cmb_anis
 
-    def create_ksz_map(self, angular_resolution, seed=40):
+    def create_ksz_map(self, angular_resolution, seed=None):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin
@@ -170,7 +171,7 @@ class Parameters:
 
         return KSZ_T
 
-    def create_tsz_map(self, angular_resolution, seed=40):
+    def create_tsz_map(self, angular_resolution, seed=None):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin

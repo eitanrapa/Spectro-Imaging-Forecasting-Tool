@@ -1,5 +1,5 @@
 import numpy as np
-from .Mather_photonNEP12a import photonNEPdifflim
+from .mather_photonNEP12a import photonNEPdifflim
 
 # Constants
 c = 299792458.0  # Speed of light - [c] = m/s

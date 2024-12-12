@@ -2,6 +2,9 @@ import numpy as np
 import camb
 import git
 from scipy.optimize import fsolve
+from .flatsky import make_gaussian_realisation, get_lpf_hpf
+from .tools import get_bl, get_nl
+from .inpaint import get_covariance, inpainting
 
 # Constants
 c = 299792458.0  # Speed of light - [c] = m/s
@@ -24,7 +27,7 @@ def d_b(dt, frequency):
     temp = TCMB / (1 + dt)
     x = (h_p / (k_b * temp)) * frequency
     I = ((2 * h_p) / (c ** 2)) * (k_b * temp / h_p) ** 3
-    return I * (x ** 4 * np.exp(x) / ((np.exp(x) - 1) ** 2)) * dt
+    return I * (x ** 4 * np.exp(x) / ((np.exp(x) - 1) ** 2)) / temp * dt
 
 
 def classical_tsz(y, frequency):
@@ -48,7 +51,7 @@ class Parameters:
     A parameter class that encapsulates creation of auxiliary parameters.
     """
 
-    def create_cmb_map(self, angular_resolution, seed=40):
+    def create_cmb_map(self, angular_resolution, realizations, seed=40):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin
@@ -63,7 +66,7 @@ class Parameters:
         # This function sets up with one massive neutrino and helium set using BBN consistency
         pars.set_cosmology(H0=67.5, ombh2=0.022, omch2=0.122, mnu=0.06, omk=0, tau=0.06)
         pars.InitPower.set_params(As=2e-9, ns=0.965, r=0)
-        lmax = 5000
+        lmax = 10000
         pars.set_for_lmax(lmax, lens_potential_accuracy=0)
 
         # calculate results for these parameters
@@ -72,61 +75,71 @@ class Parameters:
         # get dictionary of CAMB power spectra
         powers = results.get_cmb_power_spectra(pars, CMB_unit='K')
         totCL = powers['total']
-        DlTT = totCL[:, 0]
-        ell = np.arange(totCL.shape[0])
 
-        # variables to set up the size of the map
-        N = 2 ** 10  # this is the number of pixels in a linear dimension
+        el = np.arange(totCL.shape[0])
+        dl_tt = totCL[:, 0]
+        dl_tt[0] = 0
+        dl_fac = el * (el + 1) / 2 / np.pi
+        cl_tt = (TCMB ** 2. * dl_tt * 1e12) / dl_fac
+        cl_dic = {'TT': cl_tt}
 
-        # since we are using lots of FFTs this should be a factor of 2^N
-        pix_size = angular_resolution  # size of a pixel in arcminutes
+        # params or supply a params file
+        dx = angular_resolution
+        boxsize_am = 200.  # boxsize in arcmins
+        nx = int(boxsize_am / dx)
+        mapparams = [nx, nx, dx, dx]
+        x1, x2 = -nx / 2. * dx, nx / 2. * dx
 
-        # convert Dl to Cl
-        ClTT = DlTT * 2 * np.pi / (ell * (ell + 1.))
-        ClTT[0] = 0.  # set the monopole and the dipole of the Cl spectrum to zero
-        ClTT[1] = 0.
+        # beam and noise levels
+        noiseval = 1.0  # uK-arcmin
+        beamval = angular_resolution  # arcmins
+        bl = get_bl(beamval, el, make_2d=1, mapparams=mapparams)
 
-        # make a 2D real space coordinate system
-        onesvec = np.ones(N)
-        inds = (np.arange(N) + .5 - N / 2.) / (N - 1.)  # create an array of size N between -0.5 and +0.5
+        # for inpainting
+        noofsims = 1000
+        mask_radius_inner = 8  # arcmins
+        mask_radius_outer = 60  # arcmins
 
-        # compute the outer product matrix: X[i, j] = onesvec[i] * inds[j] for i,j
-        # in range(N), which is just N rows copies of inds - for the x dimension
-        X = np.outer(onesvec, inds)
+        # get ra, dec or map-pixel grid
+        ra = np.linspace(x1, x2, nx)  # arcmins
+        dec = np.linspace(x1, x2, nx)  # arcmins
+        ra_grid, dec_grid = np.meshgrid(ra, dec)
 
-        # compute the transpose for the y dimension
-        Y = np.transpose(X)
+        # get beam and noise
+        nl_dic = {}
+        nl = [get_nl(noiseval, el)]
+        nl_dic['T'] = nl[0]
+        lpf = get_lpf_hpf(mapparams, 3000, filter_type=0)
 
-        # radial component R
-        R = np.sqrt(X ** 2. + Y ** 2.)
+        cmb_map = np.asarray([make_gaussian_realisation(mapparams, el, cl_tt, bl=bl)])
+        noise_map = np.asarray([make_gaussian_realisation(mapparams, el, nl[0])])
+        sim_map = cmb_map + noise_map
 
-        # now make a 2D CMB power spectrum
-        pix_to_rad = (
-                pix_size / 60. * np.pi / 180.)  # going from pix_size in arcmins to degrees and then degrees to radians
-        ell_scale_factor = 2. * np.pi / pix_to_rad  # now relating the angular size in radians to multipoles
-        ell2d = R * ell_scale_factor  # making a fourier space analogue to the real space R vector
-        ClTT_expanded = np.zeros(int(ell2d.max()) + 1)
+        sigma_dic = get_covariance(ra_grid=ra_grid, dec_grid=dec_grid, mapparams=mapparams, el=el,
+                                   cl_dic=cl_dic, bl=bl, lpf=lpf, nl_dic=nl_dic, noofsims=noofsims,
+                                   mask_radius_inner=mask_radius_inner, mask_radius_outer=mask_radius_outer,
+                                   low_pass_cutoff=1)
 
-        # making an expanded Cl spectrum (of zeros) that goes all the way to the size of the 2D ell vector
-        ClTT_expanded[0:ClTT.size] = ClTT  # fill in the Cls until the max of the ClTT vector
+        cmb_anis = []
+        for i in range(realizations):
+            # perform inpainting
+            sim_map_dic = {'T': sim_map}
+            (cmb_inpainted_map, sim_map_inpainted,
+             sim_map_filtered) = inpainting(map_dic_to_inpaint=sim_map_dic,
+                                            ra_grid=ra_grid,
+                                            dec_grid=dec_grid,
+                                            mapparams=mapparams, el=el,
+                                            cl_dic=cl_dic, bl=bl, lpf=lpf,
+                                            nl_dic=nl_dic,
+                                            mask_radius_inner=mask_radius_inner,
+                                            mask_radius_outer=mask_radius_outer,
+                                            low_pass_cutoff=1,
+                                            sigma_dic=sigma_dic)
+            cmb_anis.append(sim_map_filtered[33:34, 33:34] - sim_map_inpainted[33:34, 33:34])
 
-        # the 2D Cl spectrum is defined on the multiple vector set by the pixel scale
-        CLTT2d = ClTT_expanded[ell2d.astype(int)]
+        cmb_anis = np.asarray(cmb_anis).flatten()*1e-6
 
-        # now make a realization of the CMB with the given power spectrum in real space
-        random_array_for_T = np.random.normal(0, 1, (N, N))
-        FT_random_array_for_T = np.fft.fft2(random_array_for_T)  # take FFT since we are in Fourier space
-
-        FT_2d = np.sqrt(CLTT2d) * FT_random_array_for_T  # we take the sqrt since the power spectrum is T^2
-
-        # move back from ell space to real space
-        CMB_T = np.fft.ifft2(np.fft.fftshift(FT_2d))
-        # move back to pixel space for the map
-        CMB_T = CMB_T / (pix_size / 60. * np.pi / 180.)
-        # we only want to plot the real component
-        CMB_T = np.real(CMB_T)
-
-        return CMB_T
+        return cmb_anis
 
     def create_ksz_map(self, angular_resolution, seed=40):
         """
@@ -137,60 +150,23 @@ class Parameters:
         # Set a seed
         np.random.seed(seed)
 
-        # Flat power spectrum
-        DlTT = np.asanyarray([3e-12] * 5051)  # K^2
-        ell = np.arange(5051)
+        el = np.arange(5051)
+        dl_tt = np.asanyarray([3e-12] * 5051)
+        dl_tt[0] = 0
+        dl_fac = el * (el + 1) / 2 / np.pi
+        cl_tt = (TCMB ** 2. * dl_tt * 1e12) / (dl_fac)
 
-        # variables to set up the size of the map
-        N = 2 ** 10  # this is the number of pixels in a linear dimension
+        # params or supply a params file
+        dx = angular_resolution
+        boxsize_am = 3000.  # boxsize in arcmins
+        nx = int(boxsize_am / dx)
+        mapparams = [nx, nx, dx, dx]
 
-        # since we are using lots of FFTs this should be a factor of 2^N
-        pix_size = angular_resolution  # size of a pixel in arcminutes
+        beamval = angular_resolution  # arcmins
+        bl = get_bl(beamval, el, make_2d=1, mapparams=mapparams)
 
-        # convert Dl to Cl
-        ClTT = DlTT * 2 * np.pi / (ell * (ell + 1.))
-        ClTT[0] = 0.  # set the monopole and the dipole of the Cl spectrum to zero
-        ClTT[1] = 0.
-
-        # make a 2D real space coordinate system
-        onesvec = np.ones(N)
-        inds = (np.arange(N) + .5 - N / 2.) / (N - 1.)  # create an array of size N between -0.5 and +0.5
-
-        # compute the outer product matrix: X[i, j] = onesvec[i] * inds[j] for i,j
-        # in range(N), which is just N rows copies of inds - for the x dimension
-        X = np.outer(onesvec, inds)
-
-        # compute the transpose for the y dimension
-        Y = np.transpose(X)
-
-        # radial component R
-        R = np.sqrt(X ** 2. + Y ** 2.)
-
-        # now make a 2D CMB power spectrum
-        pix_to_rad = (
-                pix_size / 60. * np.pi / 180.)  # going from pix_size in arcmins to degrees and then degrees to radians
-        ell_scale_factor = 2. * np.pi / pix_to_rad  # now relating the angular size in radians to multipoles
-        ell2d = R * ell_scale_factor  # making a fourier space analogue to the real space R vector
-        ClTT_expanded = np.zeros(int(ell2d.max()) + 1)
-
-        # making an expanded Cl spectrum (of zeros) that goes all the way to the size of the 2D ell vector
-        ClTT_expanded[0:ClTT.size] = ClTT  # fill in the Cls until the max of the ClTT vector
-
-        # the 2D Cl spectrum is defined on the multiple vector set by the pixel scale
-        CLTT2d = ClTT_expanded[ell2d.astype(int)]
-
-        # now make a realization of the CMB with the given power spectrum in real space
-        random_array_for_T = np.random.normal(0, 1, (N, N))
-        FT_random_array_for_T = np.fft.fft2(random_array_for_T)  # take FFT since we are in Fourier space
-
-        FT_2d = np.sqrt(CLTT2d) * FT_random_array_for_T  # we take the sqrt since the power spectrum is T^2
-
-        # move back from ell space to real space
-        KSZ_T = np.fft.ifft2(np.fft.fftshift(FT_2d))
-        # move back to pixel space for the map
-        KSZ_T = KSZ_T / (pix_size / 60. * np.pi / 180.)
-        # we only want to plot the real component
-        KSZ_T = np.real(KSZ_T)
+        KSZ_map = np.asarray([make_gaussian_realisation(mapparams, el, cl_tt, bl=bl)])
+        KSZ_T = KSZ_map.reshape(nx, nx) * 1e-6  # Convert to K
 
         return KSZ_T
 
@@ -205,66 +181,31 @@ class Parameters:
 
         # Flat power spectrum
         frequency = 143e9
-        DlTT = np.asanyarray([3.42e-12] * 5051)  # K^2
-        ell = np.arange(5051)
 
-        # variables to set up the size of the map
-        N = 2 ** 10  # this is the number of pixels in a linear dimension
+        dl_tt = np.asanyarray([3.42e-12] * 5051)
+        dl_tt[0] = 0
+        el = np.arange(5051)
+        dl_fac = el * (el + 1) / 2 / np.pi
+        cl_tt = (TCMB ** 2. * dl_tt * 1e12) / (dl_fac)
 
-        # since we are using lots of FFTs this should be a factor of 2^N
-        pix_size = angular_resolution  # size of a pixel in arcminutes
+        # params or supply a params file
+        dx = angular_resolution
+        boxsize_am = 3000.  # boxsize in arcmins
+        nx = int(boxsize_am / dx)
+        mapparams = [nx, nx, dx, dx]
 
-        # convert Dl to Cl
-        ClTT = DlTT * 2 * np.pi / (ell * (ell + 1.))
-        ClTT[0] = 0.  # set the monopole and the dipole of the Cl spectrum to zero
-        ClTT[1] = 0.
+        beamval = angular_resolution  # arcmins
+        bl = get_bl(beamval, el, make_2d=1, mapparams=mapparams)
 
-        # make a 2D real space coordinate system
-        onesvec = np.ones(N)
-        inds = (np.arange(N) + .5 - N / 2.) / (N - 1.)  # create an array of size N between -0.5 and +0.5
-
-        # compute the outer product matrix: X[i, j] = onesvec[i] * inds[j] for i,j
-        # in range(N), which is just N rows copies of inds - for the x dimension
-        X = np.outer(onesvec, inds)
-
-        # compute the transpose for the y dimension
-        Y = np.transpose(X)
-
-        # radial component R
-        R = np.sqrt(X ** 2. + Y ** 2.)
-
-        # now make a 2D CMB power spectrum
-        pix_to_rad = (
-                pix_size / 60. * np.pi / 180.)  # going from pix_size in arcmins to degrees and then degrees to radians
-        ell_scale_factor = 2. * np.pi / pix_to_rad  # now relating the angular size in radians to multipoles
-        ell2d = R * ell_scale_factor  # making a fourier space analogue to the real space R vector
-        ClTT_expanded = np.zeros(int(ell2d.max()) + 1)
-
-        # making an expanded Cl spectrum (of zeros) that goes all the way to the size of the 2D ell vector
-        ClTT_expanded[0:ClTT.size] = ClTT  # fill in the Cls until the max of the ClTT vector
-
-        # the 2D Cl spectrum is defined on the multiple vector set by the pixel scale
-        CLTT2d = ClTT_expanded[ell2d.astype(int)]
-
-        # now make a realization of the CMB with the given power spectrum in real space
-        random_array_for_T = np.random.normal(0, 1, (N, N))
-        FT_random_array_for_T = np.fft.fft2(random_array_for_T)  # take FFT since we are in Fourier space
-
-        FT_2d = np.sqrt(CLTT2d) * FT_random_array_for_T  # we take the sqrt since the power spectrum is T^2
-
-        # move back from ell space to real space
-        TSZ_T = np.fft.ifft2(np.fft.fftshift(FT_2d))
-        # move back to pixel space for the map
-        TSZ_T = TSZ_T / (pix_size / 60. * np.pi / 180.)
-        # we only want to plot the real component
-        TSZ_T = np.real(TSZ_T)
+        TSZ_map = np.asarray([make_gaussian_realisation(mapparams, el, cl_tt, bl=bl)])
+        TSZ_T = TSZ_map.reshape(nx, nx) * 1e-6  # Convert to K
         TSZ_Y = np.copy(TSZ_T)
 
         def func(y_value, dt):
             return classical_tsz(y=y_value, frequency=frequency) - d_b(dt=dt, frequency=frequency)
 
-        for i in range(N):
-            for k in range(N):
+        for i in range(nx):
+            for k in range(nx):
                 TSZ_Y[i][k] = fsolve(func, np.asanyarray([0]), args=[TSZ_T[i][k]])
 
         return TSZ_Y
@@ -280,8 +221,8 @@ class Parameters:
         params = [[0, 0, 0, 0, 0]]
         params = np.asarray(params)
 
-        # Create primary CMB map
-        cmb_map = self.create_cmb_map(angular_resolution=angular_resolution)
+        # Get CMB anisotropies
+        amp_cmb = self.create_cmb_map(angular_resolution=angular_resolution, realizations=realizations)
 
         # Create secondary kSZ, tSZ map
         ksz_map = self.create_ksz_map(angular_resolution=angular_resolution)
@@ -296,22 +237,17 @@ class Parameters:
 
             # Pick coordinates of random map
             # Low and high defined from CMB map size
-            long = np.random.randint(low=2, high=1000)
-            lat = np.random.randint(low=2, high=1000)
-
-            # Inpainting of 5x5 for primary CMB
-            amp_cmb = cmb_map[long, lat]
-            amp_cmb = amp_cmb - np.mean(cmb_map[long - 2:long + 3, lat - 2:lat + 3])
+            long = np.random.randint(low=2, high=998)
+            lat = np.random.randint(low=2, high=998)
 
             # Make CMB secondary anisotropies
-            # Numbers determined empirically
             amp_ksz = ksz_map[long, lat]
             amp_ksz = amp_ksz - np.mean(ksz_map[long - 2:long + 3, lat - 2:lat + 3])
 
             amp_tsz = tsz_map[long, lat]
             amp_tsz = amp_tsz - np.mean(tsz_map[long - 2:long + 3, lat - 2:lat + 3])
 
-            params_realization = [[sides_long, sides_lat, amp_cmb, amp_ksz, amp_tsz]]
+            params_realization = [[sides_long, sides_lat, amp_cmb[i], amp_ksz, amp_tsz]]
             params = np.append(arr=params, values=params_realization, axis=0)
 
         params = params[1:, :]

@@ -152,7 +152,7 @@ Resolves for y-value, electron temperature, peculiar velocity, profile of CIB, C
 
         # end of file
 
-    d. Run the command "conda create -f sift.yaml"
+    d. Run the command "conda env create -f sift.yaml"
     e. Activate the environment
     
 8. Go to the pyre directory and run the command "python3 [PATH]/mm/mm.py" replacing [PATH] with the path to the mm directory

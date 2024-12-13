@@ -46,7 +46,7 @@ class Projection:
             split_data = [np.array_split(row, n_sublists) for row in data]
 
             # Remove sublists from the first row
-            remaining_sublists_first_row, remaining_indices = remove_furthest_sublists(split_data[0], target_num,
+            remaining_sublists_first_row, remaining_indices = remove_furthest_sublists(split_data[2], target_num,
                                                                                        n_remove)
 
             # Now remove corresponding sublists from all other rows based on remaining_indices
@@ -100,7 +100,7 @@ class Projection:
 
         theta = (y_value, electron_temperature, peculiar_velocity, a_sides, b_sides)
 
-        data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
+        data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=peculiar_velocity,
                                                n_remove=remove_outlier_simulations)
 
         # Plot contour plot
@@ -135,10 +135,10 @@ class Projection:
         b_sides = f1.attrs["b_sides"]
         realizations = f1.attrs["realizations"]
 
-        data1 = self.remove_outlier_simulations(data1, n_sublists=realizations, target_num=y_value,
+        data1 = self.remove_outlier_simulations(data1, n_sublists=realizations, target_num=peculiar_velocity,
                                                 n_remove=remove_outlier_simulations)
 
-        data2 = self.remove_outlier_simulations(data2, n_sublists=realizations, target_num=y_value,
+        data2 = self.remove_outlier_simulations(data2, n_sublists=realizations, target_num=peculiar_velocity,
                                                 n_remove=remove_outlier_simulations)
 
         chain_labels = ["Run {}".format(str(file_name1)), "Run {}".format(str(file_name2))]
@@ -170,9 +170,9 @@ class Projection:
         labels = ('y', 'temperature', 'peculiar_velocity', 'a_sides', 'b_sides')
 
         realizations = f.attrs["realizations"]
-        y_value = f.attrs["y"]
+        peculiar_velocity = f.attrs["peculiar_velocity"]
 
-        data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
+        data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=peculiar_velocity,
                                                n_remove=remove_outlier_simulations)
 
         fig, axes = plt.subplots(4, figsize=(30, 40), sharex=True)
@@ -201,9 +201,9 @@ class Projection:
         data = f["chains"][:]
 
         realizations = f.attrs["realizations"]
-        y_value = f.attrs["y"]
+        peculiar_velocity = f.attrs["peculiar_velocity"]
 
-        data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=y_value,
+        data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=peculiar_velocity,
                                                n_remove=remove_outlier_simulations)
 
         y_median = np.median(data[:, 0])

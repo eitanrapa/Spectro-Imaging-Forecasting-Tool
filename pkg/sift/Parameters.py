@@ -79,8 +79,7 @@ class Parameters:
         el = np.arange(totCL.shape[0])
         dl_tt = totCL[:, 0]
         dl_tt[0] = 0
-        dl_fac = el * (el + 1) / 2 / np.pi
-        cl_tt = (TCMB ** 2. * dl_tt * 1e12) / dl_fac
+        cl_tt = (dl_tt * 1e12 * 2 * np.pi / (el * (el + 1.)))  # Convert to uK
         cl_dic = {'TT': cl_tt}
 
         # params or supply a params file
@@ -97,7 +96,7 @@ class Parameters:
 
         # for inpainting
         noofsims = 1000
-        mask_radius_inner = 8  # arcmins
+        mask_radius_inner = 7.5  # arcmins
         mask_radius_outer = 60  # arcmins
 
         # get ra, dec or map-pixel grid
@@ -142,7 +141,7 @@ class Parameters:
 
         return cmb_anis
 
-    def create_ksz_map(self, angular_resolution, seed=None):
+    def create_ksz_map(self, angular_resolution, realizations, seed=None):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin
@@ -152,26 +151,71 @@ class Parameters:
         np.random.seed(seed)
 
         el = np.arange(5051)
-        dl_tt = np.asanyarray([3e-12] * 5051)
+        dl_tt = np.asanyarray([3] * 5051)  # Already in uK
         dl_tt[0] = 0
-        dl_fac = el * (el + 1) / 2 / np.pi
-        cl_tt = (TCMB ** 2. * dl_tt * 1e12) / (dl_fac)
+        cl_tt = (dl_tt * 2 * np.pi / (el * (el + 1.)))
+        cl_dic = {'TT': cl_tt}
 
         # params or supply a params file
         dx = angular_resolution
-        boxsize_am = 3000.  # boxsize in arcmins
+        boxsize_am = 200.  # boxsize in arcmins
         nx = int(boxsize_am / dx)
         mapparams = [nx, nx, dx, dx]
+        x1, x2 = -nx / 2. * dx, nx / 2. * dx
 
+        # beam and noise levels
+        noiseval = 1.0  # uK-arcmin
         beamval = angular_resolution  # arcmins
         bl = get_bl(beamval, el, make_2d=1, mapparams=mapparams)
 
-        KSZ_map = np.asarray([make_gaussian_realisation(mapparams, el, cl_tt, bl=bl)])
-        KSZ_T = KSZ_map.reshape(nx, nx) * 1e-6  # Convert to K
+        # for inpainting
+        noofsims = 1000
+        mask_radius_inner = 7.5  # arcmins
+        mask_radius_outer = 60  # arcmins
 
-        return KSZ_T
+        # get ra, dec or map-pixel grid
+        ra = np.linspace(x1, x2, nx)  # arcmins
+        dec = np.linspace(x1, x2, nx)  # arcmins
+        ra_grid, dec_grid = np.meshgrid(ra, dec)
 
-    def create_tsz_map(self, angular_resolution, seed=None):
+        # get beam and noise
+        nl_dic = {}
+        nl = [get_nl(noiseval, el)]
+        nl_dic['T'] = nl[0]
+        lpf = get_lpf_hpf(mapparams, 3000, filter_type=0)
+
+        ksz_map = np.asarray([make_gaussian_realisation(mapparams, el, cl_tt, bl=bl)])
+        noise_map = np.asarray([make_gaussian_realisation(mapparams, el, nl[0])])
+        sim_map = ksz_map + noise_map
+
+        sigma_dic = get_covariance(ra_grid=ra_grid, dec_grid=dec_grid, mapparams=mapparams, el=el,
+                                   cl_dic=cl_dic, bl=bl, lpf=lpf, nl_dic=nl_dic, noofsims=noofsims,
+                                   mask_radius_inner=mask_radius_inner, mask_radius_outer=mask_radius_outer,
+                                   low_pass_cutoff=1)
+
+        ksz_anis = []
+        for i in range(realizations):
+            # perform inpainting
+            sim_map_dic = {'T': sim_map}
+            (ksz_inpainted_map, sim_map_inpainted,
+             sim_map_filtered) = inpainting(map_dic_to_inpaint=sim_map_dic,
+                                            ra_grid=ra_grid,
+                                            dec_grid=dec_grid,
+                                            mapparams=mapparams, el=el,
+                                            cl_dic=cl_dic, bl=bl, lpf=lpf,
+                                            nl_dic=nl_dic,
+                                            mask_radius_inner=mask_radius_inner,
+                                            mask_radius_outer=mask_radius_outer,
+                                            low_pass_cutoff=1,
+                                            sigma_dic=sigma_dic)
+            ksz_anis.append(sim_map_filtered[33:34, 33:34] - sim_map_inpainted[33:34, 33:34])
+
+        ksz_anis = np.asarray(ksz_anis).flatten()*1e-6  # Convert back to Kelvin
+        ksz_anis = ksz_anis - np.mean(ksz_anis)  # Normalize a little bit
+
+        return ksz_anis
+
+    def create_tsz_map(self, angular_resolution, realizations, seed=None):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin
@@ -183,11 +227,10 @@ class Parameters:
         # Flat power spectrum
         frequency = 143e9
 
-        dl_tt = np.asanyarray([3.42e-12] * 5051)
-        dl_tt[0] = 0
         el = np.arange(5051)
-        dl_fac = el * (el + 1) / 2 / np.pi
-        cl_tt = (TCMB ** 2. * dl_tt * 1e12) / (dl_fac)
+        dl_tt = np.asanyarray([3.42] * 5051)  # Already in uK
+        dl_tt[0] = 0
+        cl_tt = (dl_tt * 2 * np.pi / (el * (el + 1.)))
 
         # params or supply a params file
         dx = angular_resolution
@@ -198,18 +241,21 @@ class Parameters:
         beamval = angular_resolution  # arcmins
         bl = get_bl(beamval, el, make_2d=1, mapparams=mapparams)
 
-        TSZ_map = np.asarray([make_gaussian_realisation(mapparams, el, cl_tt, bl=bl)])
-        TSZ_T = TSZ_map.reshape(nx, nx) * 1e-6  # Convert to K
-        TSZ_Y = np.copy(TSZ_T)
-
         def func(y_value, dt):
             return classical_tsz(y=y_value, frequency=frequency) - d_b(dt=dt, frequency=frequency)
 
-        for i in range(nx):
-            for k in range(nx):
-                TSZ_Y[i][k] = fsolve(func, np.asanyarray([0]), args=[TSZ_T[i][k]])
+        tsz_anis = []
+        for i in range(realizations):
 
-        return TSZ_Y
+            TSZ_map = np.asarray([make_gaussian_realisation(mapparams, el, cl_tt, bl=bl)])
+            TSZ_T = TSZ_map.reshape(nx, nx) * 1e-6  # Convert to K
+
+            tsz_anis.append(fsolve(func=func, x0=np.asarray([0]), args=[np.asarray(TSZ_T[33, 33])]))
+
+        tsz_anis = np.asarray(tsz_anis).flatten()
+        tsz_anis = tsz_anis - np.mean(tsz_anis)  # Normalize a little bit
+
+        return tsz_anis
 
     def create_parameter_file(self, angular_resolution=3.0, realizations=100):
         """
@@ -226,8 +272,8 @@ class Parameters:
         amp_cmb = self.create_cmb_map(angular_resolution=angular_resolution, realizations=realizations)
 
         # Create secondary kSZ, tSZ map
-        ksz_map = self.create_ksz_map(angular_resolution=angular_resolution)
-        tsz_map = self.create_tsz_map(angular_resolution=angular_resolution)
+        amp_ksz = self.create_ksz_map(angular_resolution=angular_resolution, realizations=realizations)
+        amp_tsz = self.create_tsz_map(angular_resolution=angular_resolution, realizations=realizations)
 
         # Make realizations
         for i in range(realizations):
@@ -236,19 +282,7 @@ class Parameters:
             sides_long = np.random.randint(low=0, high=160)
             sides_lat = np.random.randint(low=0, high=160)
 
-            # Pick coordinates of random map
-            # Low and high defined from CMB map size
-            long = np.random.randint(low=2, high=998)
-            lat = np.random.randint(low=2, high=998)
-
-            # Make CMB secondary anisotropies
-            amp_ksz = ksz_map[long, lat]
-            amp_ksz = amp_ksz - np.mean(ksz_map[long - 2:long + 3, lat - 2:lat + 3])
-
-            amp_tsz = tsz_map[long, lat]
-            amp_tsz = amp_tsz - np.mean(tsz_map[long - 2:long + 3, lat - 2:lat + 3])
-
-            params_realization = [[sides_long, sides_lat, amp_cmb[i], amp_ksz, amp_tsz]]
+            params_realization = [[sides_long, sides_lat, amp_cmb[i], amp_ksz[i], amp_tsz[i]]]
             params = np.append(arr=params, values=params_realization, axis=0)
 
         params = params[1:, :]

@@ -51,7 +51,8 @@ class Parameters:
     A parameter class that encapsulates creation of auxiliary parameters.
     """
 
-    def create_cmb_map(self, angular_resolution, realizations, seed=None):
+    def create_cmb_map(self, angular_resolution, realizations, inpainting_radius, inpainting_outer_mask,
+                       instrument_noise, seed=None):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin
@@ -90,14 +91,14 @@ class Parameters:
         x1, x2 = -nx / 2. * dx, nx / 2. * dx
 
         # beam and noise levels
-        noiseval = 1.0  # uK-arcmin
+        noiseval = instrument_noise # uK-arcmin
         beamval = angular_resolution  # arcmins
         bl = get_bl(beamval, el, make_2d=1, mapparams=mapparams)
 
         # for inpainting
         noofsims = 1000
-        mask_radius_inner = 7.5  # arcmins
-        mask_radius_outer = 60  # arcmins
+        mask_radius_inner = inpainting_radius  # arcmins
+        mask_radius_outer = inpainting_outer_mask  # arcmins
 
         # get ra, dec or map-pixel grid
         ra = np.linspace(x1, x2, nx)  # arcmins
@@ -141,7 +142,8 @@ class Parameters:
 
         return cmb_anis
 
-    def create_ksz_map(self, angular_resolution, realizations, seed=None):
+    def create_ksz_map(self, angular_resolution, realizations, inpainting_radius, inpainting_outer_mask,
+                       instrument_noise, seed=None):
         """
         Creates a map of the CMB anisotropies using CAMB.
         :return: a cmb map in Kelvin
@@ -164,14 +166,14 @@ class Parameters:
         x1, x2 = -nx / 2. * dx, nx / 2. * dx
 
         # beam and noise levels
-        noiseval = 1.0  # uK-arcmin
+        noiseval = instrument_noise # uK-arcmin
         beamval = angular_resolution  # arcmins
         bl = get_bl(beamval, el, make_2d=1, mapparams=mapparams)
 
         # for inpainting
         noofsims = 1000
-        mask_radius_inner = 7.5  # arcmins
-        mask_radius_outer = 60  # arcmins
+        mask_radius_inner = inpainting_radius # arcmins
+        mask_radius_outer = inpainting_outer_mask  # arcmins
 
         # get ra, dec or map-pixel grid
         ra = np.linspace(x1, x2, nx)  # arcmins
@@ -257,10 +259,14 @@ class Parameters:
 
         return tsz_anis
 
-    def create_parameter_file(self, angular_resolution=3.0, realizations=100):
+    def create_parameter_file(self, angular_resolution=3.0, realizations=100,
+                              inpainting_radius=7.5, inpainting_outer_mask=60, instrument_noise=1):
         """
         Creates a file of fiducial parameters for contaminants including CMB, CIB, and secondary tsz and ksz.
-        :param angular_resolution:
+        :param angular_resolution: pixel size
+        :param inpainting_radius: radius of inpainting
+        :param inpainting_outer_mask: outer region for interpolation
+        :param instrument_noise: noise level of instrument
         :param realizations: amount of realizations
         :return None:
         """
@@ -269,10 +275,14 @@ class Parameters:
         params = np.asarray(params)
 
         # Get CMB anisotropies
-        amp_cmb = self.create_cmb_map(angular_resolution=angular_resolution, realizations=realizations)
+        amp_cmb = self.create_cmb_map(angular_resolution=angular_resolution, inpainting_radius=inpainting_radius,
+                                      inpainting_outer_mask=inpainting_outer_mask, instrument_noise=instrument_noise,
+                                      realizations=realizations)
 
         # Create secondary kSZ, tSZ map
-        amp_ksz = self.create_ksz_map(angular_resolution=angular_resolution, realizations=realizations)
+        amp_ksz = self.create_ksz_map(angular_resolution=angular_resolution, inpainting_radius=inpainting_radius,
+                                      inpainting_outer_mask=inpainting_outer_mask, instrument_noise=instrument_noise,
+                                      realizations=realizations)
         amp_tsz = self.create_tsz_map(angular_resolution=angular_resolution, realizations=realizations)
 
         # Make realizations

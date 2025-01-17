@@ -83,7 +83,7 @@ class Parameters:
         cl_dic = {'TT': cl_tt}
 
         # params or supply a params file
-        dx = angular_resolution
+        dx = 3.0
         boxsize_am = 200.  # boxsize in arcmins
         nx = int(boxsize_am / dx)
         mapparams = [nx, nx, dx, dx]
@@ -157,7 +157,7 @@ class Parameters:
         cl_dic = {'TT': cl_tt}
 
         # params or supply a params file
-        dx = angular_resolution
+        dx = 3.0
         boxsize_am = 200.  # boxsize in arcmins
         nx = int(boxsize_am / dx)
         mapparams = [nx, nx, dx, dx]
@@ -233,7 +233,7 @@ class Parameters:
         cl_tt = (dl_tt * 2 * np.pi / (el * (el + 1.)))
 
         # params or supply a params file
-        dx = angular_resolution
+        dx = 3.0
         boxsize_am = 3000.  # boxsize in arcmins
         nx = int(boxsize_am / dx)
         mapparams = [nx, nx, dx, dx]

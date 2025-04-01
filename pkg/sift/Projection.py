@@ -175,7 +175,7 @@ class Projection:
         data = self.remove_outlier_simulations(data, n_sublists=realizations, target_num=peculiar_velocity,
                                                n_remove=remove_outlier_simulations)
 
-        fig, axes = plt.subplots(4, figsize=(30, 40), sharex=True)
+        fig, axes = plt.subplots(5, figsize=(30, 40), sharex=True)
         ndim = 5
         for i in range(ndim):
             ax = axes[i]

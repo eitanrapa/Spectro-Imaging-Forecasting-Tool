@@ -1,6 +1,13 @@
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
+
 from .flatsky import cl_to_cl2d
 from pylab import *
-
 
 def get_bl(beamval, el, make_2d=0, mapparams=None):
     fwhm_radians = np.radians(beamval / 60.)
@@ -39,4 +46,4 @@ def get_nl(noiseval, el, beamval=None, use_beam_window=0, uk_to_K=0, elknee_t=-1
 
     return nl
 
-################################################################################################################
+# end of file

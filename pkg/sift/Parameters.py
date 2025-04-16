@@ -1,3 +1,11 @@
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
+
 import numpy as np
 import camb
 import git
@@ -301,3 +309,5 @@ class Parameters:
 
         # Write simulation output, change directory/name
         np.save(repo.working_tree_dir + '/files/parameter_file_' + str(realizations), arr=params, allow_pickle=True)
+
+# end of file

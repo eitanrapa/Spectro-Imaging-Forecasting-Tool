@@ -1,7 +1,7 @@
 // -*- c++ -*-
 //
 // the sift development team
-// (c) 2023-2024 all rights reserved
+// (c) 2023-2025 all rights reserved
 
 
 // code guard
@@ -18,7 +18,7 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
-// conversion code
+// szpack code
 #include <sift/sift.h>
 
 namespace py = pybind11;

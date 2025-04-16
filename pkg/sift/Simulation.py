@@ -1,3 +1,11 @@
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
+
 import numpy as np
 import emcee
 import matplotlib.pyplot as plt
@@ -77,7 +85,7 @@ def sides_continuum(freq, long, lat, angular_resolution=3.0):
 
     # Read FITS file
     repo = git.Repo('.', search_parent_directories=True)
-    fname = repo.working_tree_dir + '/files/continuum.fits'
+    fname = repo.working_tree_dir + '/files/sides_emission_lines.fits'
     hdu = fits.open(name=fname)
     image_data = hdu[0].data
 
@@ -443,3 +451,5 @@ class Simulation:
         f.attrs["walkers"] = walkers
         f.attrs["realizations"] = realizations
         f.attrs["thin_n"] = thin_n
+
+# end of file

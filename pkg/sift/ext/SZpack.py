@@ -3,7 +3,8 @@
 # -*- coding: utf-8 -*-
 #
 # the sift development team
-# (c) 2023-2024 all rights reserved
+# (c) 2023-2025 all rights reserved
+
 import numpy as np
 import sift
 

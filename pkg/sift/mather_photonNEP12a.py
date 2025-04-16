@@ -1,3 +1,11 @@
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
+
 import numpy as np
 import scipy.constants as cons
 from scipy import integrate
@@ -62,3 +70,5 @@ def photonNEPdifflim(nu_min, nu_max, Tsys, aef=1.0, npol=2):
     temp = 2 * npol * ((kB * Tsys) ** 3) * (1 / h) * fJ2[0]  # this is NEP^2
 
     return np.sqrt(temp)
+
+# end of file

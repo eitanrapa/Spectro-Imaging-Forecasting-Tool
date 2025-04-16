@@ -1,5 +1,12 @@
-import numpy as np
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
 
+import numpy as np
 
 def cl_to_cl2d(el, cl, flatskymapparams):
     """
@@ -93,3 +100,5 @@ def make_gaussian_realisation(mapparams, el, cl, bl=None):
     SIM = SIM - np.mean(SIM)
 
     return SIM
+
+# end of file

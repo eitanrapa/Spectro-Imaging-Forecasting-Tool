@@ -1,3 +1,11 @@
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
+
 import matplotlib.pyplot as plt
 import corner
 import pygtc
@@ -217,3 +225,5 @@ class Projection:
         print("Standard deviation of peculiar velocity = " + str(pec_vel_std))
 
         return y_median, y_std, pec_vel_median, pec_vel_std
+
+# end of file

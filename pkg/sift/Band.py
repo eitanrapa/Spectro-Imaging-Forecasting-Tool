@@ -1,3 +1,11 @@
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
+
 import numpy as np
 from .mather_photonNEP12a import photonNEPdifflim
 
@@ -106,3 +114,5 @@ class Band:
                 sigma_b_array = np.concatenate((sigma_b_array, sigma_B_b), axis=None)
 
         return nu_total_array, sigma_b_array
+
+# end of file

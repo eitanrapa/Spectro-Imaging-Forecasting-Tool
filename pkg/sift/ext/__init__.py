@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # the sift development team
-# (c) 2023-2024 all rights reserved
+# (c) 2023-2025 all rights reserved
 
 from .SZpack import SZpack as szPack
 

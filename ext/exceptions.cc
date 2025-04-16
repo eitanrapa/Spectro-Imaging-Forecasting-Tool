@@ -1,7 +1,7 @@
 // -*- c++ -*-
 //
-// michael a.g. aïvázis <michael.aivazis@para-sim.com>
-// (c) 1998-2024 all rights reserved
+// the sift development team
+// (c) 2023-2025 all rights reserved
 
 
 // externals

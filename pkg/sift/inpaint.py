@@ -1,3 +1,11 @@
+# -*- Python -*-
+# -*- coding: utf-8 -*-
+#
+# the sift development team
+# california institute of technology
+# (c) 2023-2025 all rights reserved
+#
+
 from .flatsky import make_gaussian_realisation
 import scipy as sc
 from pylab import *
@@ -147,3 +155,5 @@ def inpainting(map_dic_to_inpaint, ra_grid, dec_grid, mapparams, el, cl_dic, bl,
     cmb_inpainted_map[inds_inner[0], inds_inner[1]] = inpainted_t1_tqu_split
 
     return cmb_inpainted_map, inpainted_map, map_to_inpaint
+
+# end of file
